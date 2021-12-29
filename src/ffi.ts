@@ -1,14 +1,10 @@
-let lib: string | undefined;
+import { findlib } from "./util.ts";
 
-try {
-  lib = Deno.env.get("DENO_PYTHON_PATH");
-} finally {
-  // todo
-}
+const lib = Deno.env.get("DENO_PYTHON_PATH") ?? await findlib();
 
 try {
   // deno-lint-ignore no-inner-declarations no-var
-  var py = Deno.dlopen(lib ?? "D:\\Python39\\python39.dll", {
+  var py = Deno.dlopen(lib, {
     Py_DecodeLocale: {
       parameters: ["pointer", "pointer"],
       result: "pointer",
