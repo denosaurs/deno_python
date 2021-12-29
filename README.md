@@ -49,7 +49,7 @@ If the module fails to find Python, you can add the path to the Python in the
 | `--allow-run`     | yes      | For finding the location of the python library |
 | `--allow-read`    | yes      | For reading the library                        |
 | `--allow-ffi`     | yes      | It uses FFI to interact with python            |
-| `--unstable`      | yes      | It's unstable because it is uses FFI           |
+| `--unstable`      | yes      | It's unstable because it uses FFI              |
 
 ## Other
 
@@ -64,4 +64,6 @@ Pull request, issues and feedback are very welcome. Code style is formatted with
 
 ### Licence
 
-Copyright 2022, the denosaurs team. All rights reserved. MIT license.
+Copyright 2021, DjDeveloperr.
+
+Copyright 2022, the Denosaurs team. All rights reserved. MIT license.
