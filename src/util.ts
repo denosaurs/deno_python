@@ -79,7 +79,7 @@ async function findlibs(): Promise<string[]> {
       libs.concat(await search(location));
     }
   } else {
-    const paths = [];
+    const paths = ["/usr/lib", "/lib", "/usr/local/lib"];
 
     if (Deno.build.os === "darwin") {
       paths.push(
@@ -94,8 +94,6 @@ async function findlibs(): Promise<string[]> {
           libs.push(path);
         }
       }
-    } else {
-      paths.push("/usr/lib", "/lib");
     }
 
     for (const path of paths) {
