@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import { py } from "./ffi.ts";
 import { cstr } from "./util.ts";
 
@@ -9,6 +10,7 @@ export type PythonConvertibleBase =
   | boolean
   | PyObject
   | string
+  // deno-lint-ignore ban-types
   | Symbol;
 
 /**
@@ -172,6 +174,7 @@ export class PyObject {
         return PyObject.from(null);
       }
 
+      // deno-lint-ignore no-fallthrough
       case "function": {
         if (ProxiedPyObject in v) {
           return v[ProxiedPyObject];
