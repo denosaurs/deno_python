@@ -17,18 +17,19 @@ plt.show();
 
 ## Documentation
 
-Check out the docs [here](https://doc.deno.land/https://deno.land/x/python@0.0.1/mod.ts).
+Check out the docs
+[here](https://doc.deno.land/https://deno.land/x/python@0.0.1/mod.ts).
 
 ## Python Installation
 
-This module uses FFI to interface with the Python interpreter's C API.
-So you must have an existing Python installation (with the shared library),
-which is something like `python39.dll`, etc.
+This module uses FFI to interface with the Python interpreter's C API. So you
+must have an existing Python installation (with the shared library), which is
+something like `python39.dll`, etc.
 
 Python installed from Microsoft Store does not work.
 
-If the module fails to find Python, you can add the path to the Python
-in the `DENO_PYTHON_PATH` environment variable.
+If the module fails to find Python, you can add the path to the Python in the
+`DENO_PYTHON_PATH` environment variable.
 
 ## License
 

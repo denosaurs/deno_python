@@ -175,6 +175,7 @@ export class PyObject {
       }
 
       // deno-lint-ignore no-fallthrough
+
       case "function": {
         if (ProxiedPyObject in v) {
           return v[ProxiedPyObject];
