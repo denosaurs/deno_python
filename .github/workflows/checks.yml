@@ -10,7 +10,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup latest deno version
-        uses: denolib/setup-deno@v2
+        uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
 
@@ -27,9 +27,9 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup latest deno version
-        uses: denolib/setup-deno@v2
+        uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
 
       - name: Run deno test
-        run: deno test --allow-all --unstable
+        run: deno test --allow-all --unstable test/main.ts
