@@ -1,5 +1,10 @@
 # deno_python
 
+[![Tags](https://img.shields.io/github/release/denosaurs/deno_python)](https://github.com/denosaurs/deno_python/releases)
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/python/mod.ts)
+[![checks](https://github.com/denosaurs/deno_python/actions/workflows/checks.yml/badge.svg)](https://github.com/denosaurs/deno_python/actions/workflows/checks.yml)
+[![License](https://img.shields.io/github/license/denosaurs/deno_python)](https://github.com/denosaurs/deno_python/blob/master/LICENSE)
+
 Python interpreter bindings for Deno.
 
 ```ts
@@ -31,8 +36,32 @@ Python installed from Microsoft Store does not work.
 If the module fails to find Python, you can add the path to the Python in the
 `DENO_PYTHON_PATH` environment variable.
 
-## License
+## Maintainers
 
-[Apache 2.0 license](./LICENSE).
+- DjDeveloper ([@DjDeveloperr](https://github.com/DjDeveloperr))
+- Elias Sjögreen ([@eliassjogreen](https://github.com/eliassjogreen))
 
-Copyright 2021 @ DjDeveloperr
+## Permission Table
+
+| Permission Needed | Required | Reason                                         |
+| ----------------- | -------- | ---------------------------------------------- |
+| `--allow-env`     | yes      | For finding the location of the python library |
+| `--allow-run`     | yes      | For finding the location of the python library |
+| `--allow-read`    | yes      | For reading the library                        |
+| `--allow-ffi`     | yes      | It uses FFI to interact with python            |
+| `--unstable`      | yes      | It's unstable because it is uses FFI           |
+
+## Other
+
+### Related
+
+- [winit](https://github.com/rust-windowing/winit)
+
+### Contribution
+
+Pull request, issues and feedback are very welcome. Code style is formatted with
+`deno fmt` and commit messages are done following Conventional Commits spec.
+
+### Licence
+
+Copyright 2022, the denosaurs team. All rights reserved. MIT license.
