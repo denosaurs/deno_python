@@ -116,9 +116,7 @@ async function findlibs(): Promise<string[]> {
 
   for (
     const location of Deno.env.get(
-      Deno.build.os === "windows"
-        ? "PATH"
-        : "LD_LIBRARY_PATH",
+      Deno.build.os === "windows" ? "PATH" : "LD_LIBRARY_PATH",
     )?.split(Deno.build.os === "windows" ? ";" : ":") ?? []
   ) {
     libs.concat(await search(location));
