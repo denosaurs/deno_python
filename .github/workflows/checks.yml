@@ -32,4 +32,4 @@ jobs:
           deno-version: v1.x
 
       - name: Run deno test
-        run: deno test --allow-all --unstable test/main.ts
+        run: deno test --allow-all --unstable
