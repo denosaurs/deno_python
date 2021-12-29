@@ -71,15 +71,19 @@ async function findlibs(): Promise<string[]> {
   const libs: string[] = [];
 
   if (Deno.build.os === "windows") {
-    for (const location of (await where("python3")).map(dirname)) {
+    for (const location of await where("python*.dll")) {
+      libs.push(resolve(location));
+    }
+
+    for (const location of (await where("python*")).map(dirname)) {
       libs.concat(await search(location));
     }
   } else {
     for (const path of ["/usr/lib", "/lib"]) {
       for (
-        const file of (await find(path, `libpython*.${extension}`))
+        const location of await find(path, `libpython*.${extension}`)
       ) {
-        libs.push(resolve(file));
+        libs.push(resolve(location));
       }
     }
   }
@@ -96,7 +100,7 @@ async function findlibs(): Promise<string[]> {
     libs.concat(await search(path));
   }
 
-  return libs;
+  return [...new Set(libs)];
 }
 
 export async function findlib(): Promise<string> {
