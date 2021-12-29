@@ -55,7 +55,7 @@ If the module fails to find Python, you can add the path to the Python in the
 
 ### Related
 
-- [winit](https://github.com/rust-windowing/winit)
+- [python](https://www.python.org/)
 
 ### Contribution
 
