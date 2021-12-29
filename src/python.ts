@@ -11,23 +11,44 @@ export type PythonConvertibleBase =
   | string
   | Symbol;
 
+/**
+ * JS types that can be converted to Python Objects.
+ */
 export type PythonConvertible = PythonConvertibleBase | PythonConvertibleBase[];
 
+/**
+ * Symbol used on proxied Python objects to point to the original PyObject object.
+ */
 export const ProxiedPyObject = Symbol("ProxiedPyObject");
 
+/**
+ * Represents a Python object.
+ * It can be anything, like an int, a string, a list, a dict, etc. and
+ * even a module itself.
+ */
 export class PyObject {
   constructor(public handle: Deno.UnsafePointer) {}
 
+  /**
+   * Check if the object is NULL or None.
+   */
   get isNone() {
     return this.handle.value === 0n ||
-      this.handle.value === python.builtins.None[ProxiedPyObject].handle.value;
+      this.handle.value === python.None[ProxiedPyObject].handle.value;
   }
 
+  /**
+   * Increases ref count of the object and returns it.
+   */
   get owned(): PyObject {
     py.Py_IncRef(this.handle);
     return this;
   }
 
+  /**
+   * Creates an ES6 proxy object that can be used to access
+   * properties on the Python object easily.
+   */
   get proxy(): any {
     const object = (...args: any[]) => {
       return this.call(args)?.proxy;
@@ -72,6 +93,14 @@ export class PyObject {
     }) as unknown as any;
   }
 
+  /**
+   * Creates a new Python object from the given JS value.
+   *
+   * Only functions are not supported.
+   *
+   * @param v JS Value
+   * @returns Python object
+   */
   static from<T extends PythonConvertible>(v: T): PyObject {
     switch (typeof v) {
       case "boolean": {
@@ -154,6 +183,12 @@ export class PyObject {
     }
   }
 
+  /**
+   * Tries to get the attribute, returns undefined otherwise.
+   *
+   * @param name Name of the attribute.
+   * @returns Python object
+   */
   maybeGetAttr(name: string): PyObject | undefined {
     const obj = new PyObject(
       py.PyObject_GetAttrString(this.handle, cstr(name)) as Deno.UnsafePointer,
@@ -166,6 +201,9 @@ export class PyObject {
     }
   }
 
+  /**
+   * Same as maybeGetAttr, but throws an error if the attribute is not found.
+   */
   getAttr(name: string): PyObject {
     const obj = this.maybeGetAttr(name);
     if (obj === undefined) {
@@ -175,18 +213,30 @@ export class PyObject {
     }
   }
 
+  /**
+   * Casts a Bool Python object as JS Boolean value.
+   */
   asBoolean() {
     return py.PyLong_AsLong(this.handle) === 1;
   }
 
+  /**
+   * Casts a Int Python object as JS Number value.
+   */
   asLong() {
     return py.PyLong_AsLong(this.handle) as number;
   }
 
+  /**
+   * Casts a Float (Double) Python object as JS Number value.
+   */
   asDouble() {
     return py.PyFloat_AsDouble(this.handle) as number;
   }
 
+  /**
+   * Casts a String Python object as JS String value.
+   */
   asString() {
     const str = py.PyUnicode_AsUTF8(this.handle) as Deno.UnsafePointer;
     if (str.value === 0n) {
@@ -196,31 +246,48 @@ export class PyObject {
     }
   }
 
+  /**
+   * Casts a List Python object as JS Array value.
+   */
   asArray() {
-    const array: PyObject[] = [];
+    const array: PythonConvertible[] = [];
     const length = py.PyList_Size(this.handle) as number;
     for (let i = 0; i < length; i++) {
       array.push(
-        new PyObject(py.PyList_GetItem(this.handle, i) as Deno.UnsafePointer),
+        new PyObject(py.PyList_GetItem(this.handle, i) as Deno.UnsafePointer)
+          .valueOf(),
       );
     }
     return array;
   }
 
+  /**
+   * Casts a Dict Python object as JS Map value.
+   *
+   * Note: `from` supports converting both Map and Object to Python Dict.
+   * But this only supports returning a Map.
+   */
   asDict() {
-    const dict = new Map<PyObject, PyObject>();
-    const key = new BigUint64Array(1);
-    const value = new BigUint64Array(1);
-    const length = new BigUint64Array(1);
-    while (py.PyDict_Next(this.handle, key, value, length) !== 0) {
-      dict.set(
-        new PyObject(new Deno.UnsafePointer(key[0])),
-        new PyObject(new Deno.UnsafePointer(value[0])),
+    const dict = new Map<PythonConvertible, PythonConvertible>();
+    const keys = py.PyDict_Keys(this.handle) as Deno.UnsafePointer;
+    const length = py.PyList_Size(keys) as number;
+    for (let i = 0; i < length; i++) {
+      const key = new PyObject(
+        py.PyList_GetItem(keys, i) as Deno.UnsafePointer,
       );
+      const value = new PyObject(
+        py.PyDict_GetItem(this.handle, key.handle) as Deno.UnsafePointer,
+      );
+      dict.set(key.valueOf(), value.valueOf());
     }
     return dict;
   }
 
+  /**
+   * Tries to guess the value of the Python object.
+   * Only primitives are casted as JS value type, otherwise returns
+   * a proxy to Python object.
+   */
   valueOf() {
     const type = (py.PyObject_Type(this.handle) as Deno.UnsafePointer).value;
 
@@ -243,6 +310,9 @@ export class PyObject {
     }
   }
 
+  /**
+   * Calls a Python function.
+   */
   call(
     positional: PythonConvertible[] = [],
     named: Record<string, PythonConvertible> = {},
@@ -273,6 +343,9 @@ export class PyObject {
     return new PyObject(result);
   }
 
+  /**
+   * Returns `str` representation of the Python object.
+   */
   toString() {
     return new PyObject(py.PyObject_Str(this.handle) as Deno.UnsafePointer)
       .asString();
@@ -291,6 +364,9 @@ export class PythonError extends Error {
   }
 }
 
+/**
+ * Checks if there's any error set, throws it if there is.
+ */
 export function maybeThrowError() {
   const error = py.PyErr_Occurred() as Deno.UnsafePointer;
   if (error.value === 0n) {
@@ -317,8 +393,14 @@ export function maybeThrowError() {
   throw new PythonError(errorMessage);
 }
 
+/**
+ * Python interface. Do not construct directly, use `python` instead.
+ */
 export class Python {
+  /** Built-ins module. */
   builtins: any;
+
+  // Some commonly used things.
   bool: any;
   int: any;
   float: any;
@@ -342,12 +424,18 @@ export class Python {
     this.bool = this.builtins.bool;
   }
 
+  /**
+   * Runs Python script from the given string.
+   */
   run(code: string) {
     if (py.PyRun_SimpleString(cstr(code)) !== 0) {
       throw new PythonError("Failed to run code");
     }
   }
 
+  /**
+   * Import a module as PyObject.
+   */
   importObject(name: string) {
     const mod = py.PyImport_ImportModule(cstr(name)) as Deno.UnsafePointer;
     if (mod.value === 0n) {
@@ -357,9 +445,15 @@ export class Python {
     return new PyObject(mod);
   }
 
+  /**
+   * Import a Python module.
+   */
   import(name: string) {
     return this.importObject(name).proxy;
   }
 }
 
+/**
+ * Python interface.
+ */
 export const python = new Python();

@@ -330,6 +330,16 @@ try {
       parameters: ["pointer"],
       result: "pointer",
     },
+
+    PyDict_Keys: {
+      parameters: ["pointer"],
+      result: "pointer",
+    },
+
+    PyDict_GetItem: {
+      parameters: ["pointer", "pointer"],
+      result: "pointer",
+    },
   }).symbols;
 } catch (e) {
   throw new Error(`Python library not found: ${(e as Error).message}`);
