@@ -79,11 +79,11 @@ async function findlibs(): Promise<string[]> {
       libs.concat(await search(location));
     }
   } else {
-    const paths = ["/usr/lib", "/lib"];
+    const paths = [];
 
     if (Deno.build.os === "darwin") {
       paths.push(
-        "/System/Library",
+        "/System/Library/Python.framework/Versions",
         "/opt/homebrew/Frameworks",
         "/usr/local/Frameworks",
       );
@@ -91,9 +91,11 @@ async function findlibs(): Promise<string[]> {
       for (const [major, minor] of versions) {
         const path = `Python.framework/Versions/${major}.${minor}/Python`;
         if (await exists(path)) {
-          paths.push(path);
+          libs.push(path);
         }
       }
+    } else {
+      paths.push("/usr/lib", "/lib");
     }
 
     for (const path of paths) {
