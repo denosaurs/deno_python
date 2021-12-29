@@ -79,7 +79,24 @@ async function findlibs(): Promise<string[]> {
       libs.concat(await search(location));
     }
   } else {
-    for (const path of ["/usr/lib", "/lib"]) {
+    const paths = ["/usr/lib", "/lib"];
+
+    if (Deno.build.os === "darwin") {
+      paths.push(
+        "/System/Library",
+        "/opt/homebrew/Frameworks",
+        "/usr/local/Frameworks",
+      );
+
+      for (const [major, minor] of versions) {
+        const path = `Python.framework/Versions/${major}.${minor}/Python`;
+        if (await exists(path)) {
+          paths.push(path);
+        }
+      }
+    }
+
+    for (const path of paths) {
       for (
         const location of await find(path, `libpython*.${extension}`)
       ) {
@@ -89,7 +106,7 @@ async function findlibs(): Promise<string[]> {
   }
 
   for (
-    const path of Deno.env.get(
+    const location of Deno.env.get(
       Deno.build.os === "windows"
         ? "PATH"
         : Deno.build.os === "darwin"
@@ -97,7 +114,7 @@ async function findlibs(): Promise<string[]> {
         : "LD_LIBRARY_PATH",
     )?.split(Deno.build.os === "windows" ? ";" : ":") ?? []
   ) {
-    libs.concat(await search(path));
+    libs.concat(await search(location));
   }
 
   return [...new Set(libs)];
@@ -113,7 +130,11 @@ export async function findlib(): Promise<string> {
     const filename = `${prefix}python${version}.${extension}`;
 
     for (const candidate of candidates) {
-      if (candidate.endsWith(filename)) {
+      if (
+        candidate.endsWith(filename) ||
+        (Deno.build.os === "darwin" &&
+          candidate === `Python.framework/Versions/${major}.${minor}/Python`)
+      ) {
         return candidate;
       }
     }
