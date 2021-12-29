@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-explicit-any
+// deno-lint-ignore-file no-explicit-any no-fallthrough
 import { py } from "./ffi.ts";
 import { cstr } from "./util.ts";
 
@@ -173,8 +173,6 @@ export class PyObject {
       case "undefined": {
         return PyObject.from(null);
       }
-
-      // deno-lint-ignore no-fallthrough
 
       case "function": {
         if (ProxiedPyObject in v) {

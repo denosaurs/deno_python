@@ -3,14 +3,12 @@ let lib: string | undefined;
 try {
   lib = Deno.env.get("DENO_PYTHON_PATH");
 } finally {
-  if (lib !== undefined) {
-    if (Deno.build.os === "darwin") {
-    }
-  }
+  // todo
 }
 
 try {
-  var py = Deno.dlopen("D:\\Python39\\python39.dll", {
+  // deno-lint-ignore no-inner-declarations no-var
+  var py = Deno.dlopen(lib ?? "D:\\Python39\\python39.dll", {
     Py_DecodeLocale: {
       parameters: ["pointer", "pointer"],
       result: "pointer",
