@@ -114,8 +114,12 @@ export async function findlib(): Promise<string> {
       }
     }
   }
-  
-  throw new Error("Could not find python library 😔\nTry setting the environmental variable DENO_PYTHON_PATH");
+
+  throw new Error(
+    `Could not find python library, try setting the environmental variable DENO_PYTHON_PATH or installing one of the following versions of python: ${
+      versions.map(([major, minor]) => `v${major}.${minor}`).join(", ")
+    }`,
+  );
 }
 
 /**
