@@ -86,10 +86,12 @@ async function findlibs(): Promise<string[]> {
       // is outdated.
       const libs = [];
 
-      for (const framework of [
-        "/opt/homebrew/Frameworks/Python.framework/Versions",
-        "/usr/local/Frameworks/Python.framework/Versions"
-      ]) {
+      for (
+        const framework of [
+          "/opt/homebrew/Frameworks/Python.framework/Versions",
+          "/usr/local/Frameworks/Python.framework/Versions",
+        ]
+      ) {
         for (const [major, minor] of versions) {
           const path = `${framework}/${major}.${minor}/Python`;
           if (await exists(path)) {
