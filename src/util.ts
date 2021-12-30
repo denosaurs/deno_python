@@ -67,7 +67,7 @@ async function search(path: string): Promise<string[]> {
   return found;
 }
 
-async function findlibs(): Promise<string[]> {
+async function findLibs(): Promise<string[]> {
   const libs: string[] = [];
 
   if (Deno.build.os === "windows") {
@@ -125,8 +125,8 @@ async function findlibs(): Promise<string[]> {
   return [...new Set(libs)];
 }
 
-export async function findlib(): Promise<string> {
-  const candidates = await findlibs();
+export async function findLib(): Promise<string> {
+  const candidates = await findLibs();
 
   for (const [major, minor] of versions) {
     const version = Deno.build.os === "windows"

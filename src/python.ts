@@ -2,7 +2,36 @@
 import { py } from "./ffi.ts";
 import { cstr } from "./util.ts";
 
-export type PythonConvertibleBase =
+/**
+ * JS types that can be converted to Python Objects.
+ *
+ * - `number` becomes `int` or `float` depending on its value.
+ *   If you need to specifically use `float` or `int`, use the
+ *   `python.float` or `python.int` classes, like:
+ *   `python.float(42.0)`. Note that they become PyObjects,
+ *   not JS values but are still easily passable to Python.
+ *
+ * - `bigint` currently is casted as number and then transformed
+ *   to `int` Python type.
+ *
+ * - `null` and `undefined` becomes `None` in Python. Note that when
+ *   calling `valueOf` on PyObject, it is always `null`.
+ *
+ * - `boolean` becomes `bool` in Python.
+ *
+ * - `string` and `Symbol` becomes `str` in Python.
+ *
+ * - `Array` becomes `list` in Python.
+ *
+ * - `Map` and other objects becomes `dict` in Python. Note that when
+ *   calling `valueOf` on PyObject, it is always `Map` because JS object
+ *   can only have string keys, while Python dict can have any type.
+ *
+ * - `Set` becomes `set` in Python.
+ *
+ * If you pass a PyObject, it is used as-is.
+ */
+export type PythonConvertible =
   | number
   | bigint
   | null
@@ -11,28 +40,63 @@ export type PythonConvertibleBase =
   | PyObject
   | string
   // deno-lint-ignore ban-types
-  | Symbol;
-
-/**
- * JS types that can be converted to Python Objects.
- */
-export type PythonConvertible = PythonConvertibleBase | PythonConvertibleBase[];
+  | Symbol
+  | PythonConvertible[]
+  | { [key: string]: PythonConvertible }
+  | Map<PythonConvertible, PythonConvertible>
+  | Set<PythonConvertible>;
 
 /**
  * Symbol used on proxied Python objects to point to the original PyObject object.
+ *
+ * See `PyObject#proxy` for more info on proxies.
  */
 export const ProxiedPyObject = Symbol("ProxiedPyObject");
 
 /**
+ * An argument that can be passed to PyObject calls to indicate that the
+ * argument should be passed as a named one.
+ *
+ * It is allowed to pass named argument like this along with the `named` arg in
+ * `PyObject#call` because of the use in proxy objects.
+ */
+export class NamedArgument {
+  name: string;
+  value: PyObject;
+
+  constructor(name: string, value: PythonConvertible) {
+    this.name = name;
+    this.value = PyObject.from(value);
+  }
+}
+
+/**
  * Represents a Python object.
+ *
  * It can be anything, like an int, a string, a list, a dict, etc. and
  * even a module itself.
+ *
+ * Normally, you will deal with proxied PyObjects, which are basically JS
+ * objects but the get, set, etc. methods you perform on them are actually
+ * proxied to Python interpreter API.
+ *
+ * In case you need access to actual PyObject (which this module does too,
+ * internally), there's a Symbol on Proxied PyObjects `ProxiedPyObject`
+ * that is exported from this module too. It contains reference to `PyObject`.
+ *
+ * Both proxied PyObject and normal PyObject implement some basic methods like
+ * `valueOf`, `toString` and Deno inspect to provide pretty-printing, and also
+ * a way to cast Python values as JS types using `valueOf`. For caveats on `valueOf`,
+ * see its documentation.
+ *
+ * Do not construct this manually, as it takes an Unsafe Pointer pointing to the
+ * C PyObject.
  */
 export class PyObject {
   constructor(public handle: Deno.UnsafePointer) {}
 
   /**
-   * Check if the object is NULL or None.
+   * Check if the object is NULL (pointer) or None type in Python.
    */
   get isNone() {
     return this.handle.value === 0n ||
@@ -48,13 +112,52 @@ export class PyObject {
   }
 
   /**
-   * Creates an ES6 proxy object that can be used to access
-   * properties on the Python object easily.
+   * Creates proxy object that maps basic JS operations on objects
+   * such as gets, sets, function calls, has, etc. to Python interpreter API.
+   * This makes using Python APIs in JS less cumbersome.
+   *
+   * Usually, you will deal with proxied PyObjects because they're easier to interact with.
+   * If you somehow need the actual `PyObject`, refer to it's documentation.
+   *
+   * To keep it consistent, proxied objects' further get calls return proxy objects only,
+   * so you can safely chain them. But for instance, if you made a call to a method that
+   * returns a Python list using proxy object, you can call `.valueOf()` on it to turn it into
+   * a JS Array.
+   *
+   * What you can do on proxy objects:
+   *
+   * - Call them, if they are a function. An error will be thrown otherwise.
+   *
+   * - Get their attributes. Such as get `lower` attribute on a `str` object.
+   *   This same thing is used to get values of given gets in `dict`s as well.
+   *   But the thing is, preference is given to attributes, if its not found,
+   *   then we try to look for `dict` key. We could not differentiate normal
+   *   property access like something.property with `something[indexed]` in JS,
+   *   so they are done on same thing. In case this is not viable for you,
+   *   you can call the `get` method on the proxy object, which maps to `dict`'s
+   *   `get` method of course.
+   *   Just like dicts, this works for lists/tuples too - in order to return
+   *   elements based on index.
+   *   In special cases, this get accessor returns actual proxy methods,
+   *   such as `toString`, `valueOf`, etc. Either way, preference is given to
+   *   Python object first. So only if they do not have these attributes,
+   *   we return the JS functions.
+   *
+   * - Set their attributes. Same as the "get" proxy behavior described above,
+   *   but instead to set attribute / dict key / list index.
+   *
+   * - There's also this has accessor on proxy objects, which is basically like
+   *   `in` operator in Python. It checks if attribute/dict key exists in the
+   *   object.
    */
   get proxy(): any {
-    const object = (...args: any[]) => {
-      return this.call(args)?.proxy;
-    };
+    // deno-lint-ignore no-this-alias
+    const scope = this;
+    // Not using arrow function here because it disallows
+    // `new` operator being used.
+    function object(...args: any[]) {
+      return scope.call(args)?.proxy;
+    }
 
     Object.defineProperty(object, Symbol.for("Deno.customInspect"), {
       value: () => this.toString(),
@@ -73,11 +176,25 @@ export class PyObject {
       value: () => this.valueOf(),
     });
 
+    // Proxied object must be a function in order for it
+    // to be callable. We cannot just define `apply`.
     return new Proxy(object, {
       get: (_, name) => {
         // For the symbols.
         if (typeof name === "symbol" && name in object) {
           return (object as any)[name];
+        }
+
+        if (typeof name === "string" && /^\d+$/.test(name)) {
+          if (this.isInstance(python.list) || this.isInstance(python.tuple)) {
+            const item = py.PyList_GetItem(
+              this.handle,
+              parseInt(name),
+            ) as Deno.UnsafePointer;
+            if (item.value !== 0n) {
+              return new PyObject(item).proxy;
+            }
+          }
         }
 
         // Don't wanna throw errors when accessing properties.
@@ -87,12 +204,72 @@ export class PyObject {
         if (attr === undefined) {
           if (name in object) {
             return (object as any)[name];
+          } else if (typeof name === "string" && this.isInstance(python.dict)) {
+            const value = py.PyDict_GetItemString(
+              this.handle,
+              cstr(name),
+            ) as Deno.UnsafePointer;
+            if (value.value !== 0n) {
+              return new PyObject(value).proxy;
+            }
           }
         } else {
           return attr;
         }
       },
-    }) as unknown as any;
+
+      set: (_, name, value) => {
+        name = String(name);
+        if (this.hasAttr(name)) {
+          this.setAttr(String(name), value);
+          return true;
+        } else if (this.isInstance(python.dict)) {
+          py.PyDict_SetItemString(
+            this.handle,
+            cstr(name),
+            PyObject.from(value).handle,
+          );
+          return true;
+        } else if ((this.isInstance(python.list)) && /^\d+$/.test(name)) {
+          py.PyList_SetItem(
+            this.handle,
+            Number(name),
+            PyObject.from(value).handle,
+          );
+          return true;
+        } else {
+          return false;
+        }
+      },
+
+      has: (_, name) => {
+        if (typeof name === "symbol" && name in object) {
+          return true;
+        }
+
+        name = String(name);
+
+        return this.hasAttr(name) ||
+          (this.isInstance(python.dict) &&
+            this.proxy.__contains__(name).valueOf()) ||
+          name in object;
+      },
+    }) as any;
+  }
+
+  /**
+   * Calls Python `isinstance` function.
+   */
+  isInstance(cls: PythonConvertible): boolean {
+    return py.PyObject_IsInstance(this.handle, PyObject.from(cls).handle) !== 0;
+  }
+
+  /**
+   * Performs an equals operation on the Python object.
+   */
+  equals(rhs: PythonConvertible) {
+    const rhsObject = PyObject.from(rhs);
+    return py.PyObject_RichCompareBool(this.handle, rhsObject.handle, 3);
   }
 
   /**
@@ -137,6 +314,14 @@ export class PyObject {
           return new PyObject(list);
         } else if (v instanceof PyObject) {
           return v;
+        } else if (v instanceof Set) {
+          const set = py.PySet_New(null) as Deno.UnsafePointer;
+          for (const i of v) {
+            const item = PyObject.from(i);
+            py.PySet_Add(set, item.owned.handle);
+            py.Py_DecRef(item.handle);
+          }
+          return new PyObject(set);
         } else {
           const dict = py.PyDict_New() as Deno.UnsafePointer;
           for (
@@ -216,6 +401,26 @@ export class PyObject {
   }
 
   /**
+   * Tries to set the attribute, throws an error otherwise.
+   */
+  setAttr(name: string, v: PythonConvertible) {
+    if (
+      py.PyObject_SetAttrString(
+        this.handle,
+        cstr(name),
+        PyObject.from(v).handle,
+      ) !== 0
+    ) {
+      maybeThrowError();
+    }
+  }
+
+  /** Checks if Python object has an attribute of given name. */
+  hasAttr(attr: string) {
+    return py.PyObject_HasAttrString(this.handle, cstr(attr)) !== 0;
+  }
+
+  /**
    * Casts a Bool Python object as JS Boolean value.
    */
   asBoolean() {
@@ -286,7 +491,38 @@ export class PyObject {
   }
 
   /**
+   * Casts a Set Python object as JS Set value.
+   */
+  asSet() {
+    const set = new Set<PythonConvertible>();
+    const iter = py.PyObject_GetIter(this.handle) as Deno.UnsafePointer;
+    let item = py.PyIter_Next(iter) as Deno.UnsafePointer;
+    while (item.value !== 0n) {
+      set.add(new PyObject(item).valueOf());
+      item = py.PyIter_Next(iter) as Deno.UnsafePointer;
+    }
+    py.Py_DecRef(iter);
+    return set;
+  }
+
+  /**
+   * Casts a Tuple Python object as JS Array value.
+   */
+  asTuple() {
+    const tuple = new Array<PythonConvertible>();
+    const length = py.PyTuple_Size(this.handle) as number;
+    for (let i = 0; i < length; i++) {
+      tuple.push(
+        new PyObject(py.PyTuple_GetItem(this.handle, i) as Deno.UnsafePointer)
+          .valueOf(),
+      );
+    }
+    return tuple;
+  }
+
+  /**
    * Tries to guess the value of the Python object.
+   *
    * Only primitives are casted as JS value type, otherwise returns
    * a proxy to Python object.
    */
@@ -307,21 +543,30 @@ export class PyObject {
       return this.asArray();
     } else if (type === python.dict[ProxiedPyObject].handle.value) {
       return this.asDict();
+    } else if (type === python.set[ProxiedPyObject].handle.value) {
+      return this.asSet();
+    } else if (type === python.tuple[ProxiedPyObject].handle.value) {
+      return this.asTuple();
     } else {
       return this.proxy;
     }
   }
 
   /**
-   * Calls a Python function.
+   * Call the PyObject as a Python function.
    */
   call(
-    positional: PythonConvertible[] = [],
+    positional: (PythonConvertible | NamedArgument)[] = [],
     named: Record<string, PythonConvertible> = {},
   ) {
     const args = py.PyTuple_New(positional.length);
     for (let i = 0; i < positional.length; i++) {
-      py.PyTuple_SetItem(args, i, PyObject.from(positional[i]).owned.handle);
+      const arg = positional[i];
+      if (arg instanceof NamedArgument) {
+        named[arg.name] = arg.value;
+      } else {
+        py.PyTuple_SetItem(args, i, PyObject.from(arg).owned.handle);
+      }
     }
     const kwargs = py.PyDict_New();
     for (const [key, value] of Object.entries(named)) {
@@ -358,6 +603,7 @@ export class PyObject {
   }
 }
 
+/** Python-related error. */
 export class PythonError extends Error {
   name = "PythonError";
 
@@ -401,20 +647,27 @@ export function maybeThrowError() {
 export class Python {
   /** Built-ins module. */
   builtins: any;
-
-  // Some commonly used things.
+  /** Python `bool` class proxied object */
   bool: any;
+  /** Python `int` class proxied object */
   int: any;
+  /** Python `float` class proxied object */
   float: any;
+  /** Python `str` class proxied object */
   str: any;
+  /** Python `list` class proxied object */
   list: any;
+  /** Python `dict` class proxied object */
   dict: any;
+  /** Python `set` class proxied object */
+  set: any;
+  /** Python `tuple` class proxied object */
+  tuple: any;
+  /** Python `None` type proxied object */
   None: any;
 
   constructor() {
     py.Py_Initialize();
-    // Why is PyEval_GetBuiltins() not working?
-    // It returns null on every get attr.
     this.builtins = this.import("builtins");
 
     this.int = this.builtins.int;
@@ -424,6 +677,8 @@ export class Python {
     this.dict = this.builtins.dict;
     this.None = this.builtins.None;
     this.bool = this.builtins.bool;
+    this.set = this.builtins.set;
+    this.tuple = this.builtins.tuple;
   }
 
   /**
@@ -433,6 +688,24 @@ export class Python {
     if (py.PyRun_SimpleString(cstr(code)) !== 0) {
       throw new PythonError("Failed to run code");
     }
+  }
+
+  /**
+   * Runs Python script as a module and returns its module object,
+   * for using its attributes, functions, classes, etc. from JavaScript.
+   */
+  runModule(code: string, name?: string) {
+    const module = py.PyImport_ExecCodeModule(
+      cstr(name ?? "__main__"),
+      PyObject.from(
+        this.builtins.compile(code, name ?? "__main__", "exec"),
+      )
+        .handle,
+    ) as Deno.UnsafePointer;
+    if (module.value === 0n) {
+      throw new PythonError("Failed to run module");
+    }
+    return new PyObject(module)?.proxy;
   }
 
   /**
@@ -448,7 +721,7 @@ export class Python {
   }
 
   /**
-   * Import a Python module.
+   * Import a Python module as a proxy object.
    */
   import(name: string) {
     return this.importObject(name).proxy;
@@ -457,5 +730,9 @@ export class Python {
 
 /**
  * Python interface.
+ *
+ * Most of the time, you will use `import` on this object,
+ * and also make use of some common built-ins attached to
+ * this object, such as `str`, `int`, `tuple`, etc.
  */
 export const python = new Python();

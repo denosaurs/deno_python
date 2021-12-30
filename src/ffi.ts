@@ -1,6 +1,6 @@
-import { findlib } from "./util.ts";
+import { findLib } from "./util.ts";
 
-const lib = Deno.env.get("DENO_PYTHON_PATH") ?? await findlib();
+const lib = Deno.env.get("DENO_PYTHON_PATH") ?? await findLib();
 
 try {
   // deno-lint-ignore no-inner-declarations no-var
@@ -102,6 +102,11 @@ try {
 
     PyObject_SetAttrString: {
       parameters: ["pointer", "pointer", "pointer"],
+      result: "i32",
+    },
+
+    PyObject_HasAttrString: {
+      parameters: ["pointer", "pointer"],
       result: "i32",
     },
 
@@ -332,6 +337,41 @@ try {
 
     PyDict_GetItem: {
       parameters: ["pointer", "pointer"],
+      result: "pointer",
+    },
+
+    PySet_New: {
+      parameters: ["pointer"],
+      result: "pointer",
+    },
+
+    PySet_Add: {
+      parameters: ["pointer", "pointer"],
+      result: "i32",
+    },
+
+    PyImport_ExecCodeModule: {
+      parameters: ["pointer", "pointer"],
+      result: "pointer",
+    },
+
+    PyObject_IsInstance: {
+      parameters: ["pointer", "pointer"],
+      result: "i32",
+    },
+
+    PyDict_GetItemString: {
+      parameters: ["pointer", "pointer"],
+      result: "pointer",
+    },
+
+    PyTuple_Size: {
+      parameters: ["pointer"],
+      result: "i32",
+    },
+
+    PyTuple_GetItem: {
+      parameters: ["pointer", "i32"],
       result: "pointer",
     },
   }).symbols;
