@@ -1,5 +1,5 @@
 import { assert, assertEquals } from "./deps.ts";
-import { PyObject, python } from "../mod.ts";
+import { NamedArgument, PyObject, python } from "../mod.ts";
 
 Deno.test("python version", () => {
   const { version } = python.import("sys");
@@ -97,4 +97,12 @@ class Person:
     list[0] = 42;
     assertEquals(list[0].valueOf(), 42);
   });
+});
+
+Deno.test("named argument", () => {
+  assertEquals(
+    python.str("Hello, {name}!").format(new NamedArgument("name", "world"))
+      .valueOf(),
+    "Hello, world!",
+  );
 });

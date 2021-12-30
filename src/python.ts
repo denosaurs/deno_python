@@ -29,6 +29,20 @@ export type PythonConvertible =
 export const ProxiedPyObject = Symbol("ProxiedPyObject");
 
 /**
+ * An argument that can be passed to PyObject calls to indicate that the
+ * argument should be passed as a named one.
+ */
+export class NamedArgument {
+  name: string;
+  value: PyObject;
+
+  constructor(name: string, value: PythonConvertible) {
+    this.name = name;
+    this.value = PyObject.from(value);
+  }
+}
+
+/**
  * Represents a Python object.
  * It can be anything, like an int, a string, a list, a dict, etc. and
  * even a module itself.
@@ -444,12 +458,17 @@ export class PyObject {
    * Calls a Python function.
    */
   call(
-    positional: PythonConvertible[] = [],
+    positional: (PythonConvertible | NamedArgument)[] = [],
     named: Record<string, PythonConvertible> = {},
   ) {
     const args = py.PyTuple_New(positional.length);
     for (let i = 0; i < positional.length; i++) {
-      py.PyTuple_SetItem(args, i, PyObject.from(positional[i]).owned.handle);
+      const arg = positional[i];
+      if (arg instanceof NamedArgument) {
+        named[arg.name] = arg.value;
+      } else {
+        py.PyTuple_SetItem(args, i, PyObject.from(arg).owned.handle);
+      }
     }
     const kwargs = py.PyDict_New();
     for (const [key, value] of Object.entries(named)) {
