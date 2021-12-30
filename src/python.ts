@@ -426,6 +426,21 @@ export class PyObject {
   }
 
   /**
+   * Casts a Tuple Python object as JS Array value.
+   */
+  asTuple() {
+    const tuple = new Array<PythonConvertible>();
+    const length = py.PyTuple_Size(this.handle) as number;
+    for (let i = 0; i < length; i++) {
+      tuple.push(
+        new PyObject(py.PyTuple_GetItem(this.handle, i) as Deno.UnsafePointer)
+          .valueOf(),
+      );
+    }
+    return tuple;
+  }
+
+  /**
    * Tries to guess the value of the Python object.
    * Only primitives are casted as JS value type, otherwise returns
    * a proxy to Python object.
@@ -449,6 +464,8 @@ export class PyObject {
       return this.asDict();
     } else if (type === python.set[ProxiedPyObject].handle.value) {
       return this.asSet();
+    } else if (type === python.tuple[ProxiedPyObject].handle.value) {
+      return this.asTuple();
     } else {
       return this.proxy;
     }
@@ -557,6 +574,7 @@ export class Python {
   list: any;
   dict: any;
   set: any;
+  tuple: any;
   None: any;
 
   constructor() {
@@ -571,6 +589,7 @@ export class Python {
     this.None = this.builtins.None;
     this.bool = this.builtins.bool;
     this.set = this.builtins.set;
+    this.tuple = this.builtins.tuple;
   }
 
   /**

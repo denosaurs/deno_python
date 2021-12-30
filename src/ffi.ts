@@ -364,6 +364,16 @@ try {
       parameters: ["pointer", "pointer"],
       result: "pointer",
     },
+
+    PyTuple_Size: {
+      parameters: ["pointer"],
+      result: "i32",
+    },
+
+    PyTuple_GetItem: {
+      parameters: ["pointer", "i32"],
+      result: "pointer",
+    },
   }).symbols;
 } catch (e) {
   throw new Error(`Python library not found: ${(e as Error).message}`);

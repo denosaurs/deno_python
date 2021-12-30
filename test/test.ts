@@ -43,6 +43,11 @@ Deno.test("types", async (t) => {
     value = PyObject.from(new Set([1, 2, 3]));
     assertEquals(value.valueOf(), new Set([1, 2, 3]));
   });
+
+  await t.step("tuple", () => {
+    const value = python.tuple([1, 2, 3]);
+    assertEquals(value.valueOf(), [1, 2, 3]);
+  });
 });
 
 Deno.test("object", async (t) => {
