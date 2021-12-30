@@ -16,7 +16,12 @@ export type PythonConvertibleBase =
 /**
  * JS types that can be converted to Python Objects.
  */
-export type PythonConvertible = PythonConvertibleBase | PythonConvertibleBase[];
+export type PythonConvertible =
+  | PythonConvertibleBase
+  | PythonConvertible[]
+  | { [key: string]: PythonConvertible }
+  | Map<PythonConvertible, PythonConvertible>
+  | Set<PythonConvertible>;
 
 /**
  * Symbol used on proxied Python objects to point to the original PyObject object.
@@ -52,9 +57,13 @@ export class PyObject {
    * properties on the Python object easily.
    */
   get proxy(): any {
-    const object = (...args: any[]) => {
-      return this.call(args)?.proxy;
-    };
+    // deno-lint-ignore no-this-alias
+    const scope = this;
+    // Not using arrow function here because it disallows
+    // `new` operator being used.
+    function object(...args: any[]) {
+      return scope.call(args)?.proxy;
+    }
 
     Object.defineProperty(object, Symbol.for("Deno.customInspect"), {
       value: () => this.toString(),
@@ -73,11 +82,25 @@ export class PyObject {
       value: () => this.valueOf(),
     });
 
+    // Proxied object must be a function in order for it
+    // to be callable. We cannot just define `apply`.
     return new Proxy(object, {
       get: (_, name) => {
         // For the symbols.
         if (typeof name === "symbol" && name in object) {
           return (object as any)[name];
+        }
+
+        if (typeof name === "string" && /^\d+$/.test(name)) {
+          if (this.isInstance(python.list)) {
+            const item = py.PyList_GetItem(
+              this.handle,
+              parseInt(name),
+            ) as Deno.UnsafePointer;
+            if (item.value !== 0n) {
+              return new PyObject(item).proxy;
+            }
+          }
         }
 
         // Don't wanna throw errors when accessing properties.
@@ -87,12 +110,72 @@ export class PyObject {
         if (attr === undefined) {
           if (name in object) {
             return (object as any)[name];
+          } else if (typeof name === "string" && this.isInstance(python.dict)) {
+            const value = py.PyDict_GetItemString(
+              this.handle,
+              cstr(name),
+            ) as Deno.UnsafePointer;
+            if (value.value !== 0n) {
+              return new PyObject(value).proxy;
+            }
           }
         } else {
           return attr;
         }
       },
-    }) as unknown as any;
+
+      set: (_, name, value) => {
+        name = String(name);
+        if (this.hasAttr(name)) {
+          this.setAttr(String(name), value);
+          return true;
+        } else if (this.isInstance(python.dict)) {
+          py.PyDict_SetItemString(
+            this.handle,
+            cstr(name),
+            PyObject.from(value).handle,
+          );
+          return true;
+        } else if (this.isInstance(python.list) && /^\d+$/.test(name)) {
+          py.PyList_SetItem(
+            this.handle,
+            Number(name),
+            PyObject.from(value).handle,
+          );
+          return true;
+        } else {
+          return false;
+        }
+      },
+
+      has: (_, name) => {
+        if (typeof name === "symbol" && name in object) {
+          return true;
+        }
+
+        name = String(name);
+
+        return this.hasAttr(name) ||
+          (this.isInstance(python.dict) &&
+            this.proxy.__contains__(name).valueOf()) ||
+          name in object;
+      },
+    }) as any;
+  }
+
+  /**
+   * Calls Python `isinstance` function.
+   */
+  isInstance(cls: PythonConvertible): boolean {
+    return py.PyObject_IsInstance(this.handle, PyObject.from(cls).handle) !== 0;
+  }
+
+  /**
+   * Performs an equals operation on the Python object.
+   */
+  equals(rhs: PythonConvertible) {
+    const rhsObject = PyObject.from(rhs);
+    return py.PyObject_RichCompareBool(this.handle, rhsObject.handle, 3);
   }
 
   /**
@@ -137,6 +220,14 @@ export class PyObject {
           return new PyObject(list);
         } else if (v instanceof PyObject) {
           return v;
+        } else if (v instanceof Set) {
+          const set = py.PySet_New(null) as Deno.UnsafePointer;
+          for (const i of v) {
+            const item = PyObject.from(i);
+            py.PySet_Add(set, item.owned.handle);
+            py.Py_DecRef(item.handle);
+          }
+          return new PyObject(set);
         } else {
           const dict = py.PyDict_New() as Deno.UnsafePointer;
           for (
@@ -216,6 +307,26 @@ export class PyObject {
   }
 
   /**
+   * Tries to set the attribute, throws an error otherwise.
+   */
+  setAttr(name: string, v: PythonConvertible) {
+    if (
+      py.PyObject_SetAttrString(
+        this.handle,
+        cstr(name),
+        PyObject.from(v).handle,
+      ) !== 0
+    ) {
+      maybeThrowError();
+    }
+  }
+
+  /** Checks if Python object has an attribute of given name. */
+  hasAttr(attr: string) {
+    return py.PyObject_HasAttrString(this.handle, cstr(attr)) !== 0;
+  }
+
+  /**
    * Casts a Bool Python object as JS Boolean value.
    */
   asBoolean() {
@@ -286,6 +397,21 @@ export class PyObject {
   }
 
   /**
+   * Casts a Set Python object as JS Set value.
+   */
+  asSet() {
+    const set = new Set<PythonConvertible>();
+    const iter = py.PyObject_GetIter(this.handle) as Deno.UnsafePointer;
+    let item = py.PyIter_Next(iter) as Deno.UnsafePointer;
+    while (item.value !== 0n) {
+      set.add(new PyObject(item).valueOf());
+      item = py.PyIter_Next(iter) as Deno.UnsafePointer;
+    }
+    py.Py_DecRef(iter);
+    return set;
+  }
+
+  /**
    * Tries to guess the value of the Python object.
    * Only primitives are casted as JS value type, otherwise returns
    * a proxy to Python object.
@@ -307,6 +433,8 @@ export class PyObject {
       return this.asArray();
     } else if (type === python.dict[ProxiedPyObject].handle.value) {
       return this.asDict();
+    } else if (type === python.set[ProxiedPyObject].handle.value) {
+      return this.asSet();
     } else {
       return this.proxy;
     }
@@ -409,12 +537,11 @@ export class Python {
   str: any;
   list: any;
   dict: any;
+  set: any;
   None: any;
 
   constructor() {
     py.Py_Initialize();
-    // Why is PyEval_GetBuiltins() not working?
-    // It returns null on every get attr.
     this.builtins = this.import("builtins");
 
     this.int = this.builtins.int;
@@ -424,6 +551,7 @@ export class Python {
     this.dict = this.builtins.dict;
     this.None = this.builtins.None;
     this.bool = this.builtins.bool;
+    this.set = this.builtins.set;
   }
 
   /**
@@ -433,6 +561,23 @@ export class Python {
     if (py.PyRun_SimpleString(cstr(code)) !== 0) {
       throw new PythonError("Failed to run code");
     }
+  }
+
+  /**
+   * Runs Python script as a module and returns its module object.
+   */
+  runModule(code: string, name?: string) {
+    const module = py.PyImport_ExecCodeModule(
+      cstr(name ?? "__main__"),
+      PyObject.from(
+        this.builtins.compile(code, name ?? "__main__", "exec"),
+      )
+        .handle,
+    ) as Deno.UnsafePointer;
+    if (module.value === 0n) {
+      throw new PythonError("Failed to run module");
+    }
+    return new PyObject(module)?.proxy;
   }
 
   /**
