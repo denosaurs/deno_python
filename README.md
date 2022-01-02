@@ -8,7 +8,7 @@
 Python interpreter bindings for Deno.
 
 ```ts
-import { python } from "https://deno.land/x/python@0.0.1/mod.ts";
+import { python } from "https://deno.land/x/python@0.1.0/mod.ts";
 
 const np = python.import("numpy");
 const plt = python.import("matplotlib.pyplot");
@@ -23,7 +23,7 @@ plt.show();
 ## Documentation
 
 Check out the docs
-[here](https://doc.deno.land/https://deno.land/x/python@0.0.1/mod.ts).
+[here](https://doc.deno.land/https://deno.land/x/python@0.1.0/mod.ts).
 
 ## Python Installation
 
@@ -31,7 +31,8 @@ This module uses FFI to interface with the Python interpreter's C API. So you
 must have an existing Python installation (with the shared library), which is
 something like `python39.dll`, etc.
 
-Python installed from Microsoft Store does not work.
+Python installed from Microsoft Store does not work, as it does not contain
+shared library for interfacing with Python interpreter.
 
 If the module fails to find Python, you can add the path to the Python in the
 `DENO_PYTHON_PATH` environment variable.
@@ -43,13 +44,13 @@ If the module fails to find Python, you can add the path to the Python in the
 
 ## Permission Table
 
-| Permission Needed | Required | Reason                                         |
-| ----------------- | -------- | ---------------------------------------------- |
-| `--allow-env`     | yes      | For finding the location of the python library |
-| `--allow-run`     | yes      | For finding the location of the python library |
-| `--allow-read`    | yes      | For reading the library                        |
-| `--allow-ffi`     | yes      | It uses FFI to interact with python            |
-| `--unstable`      | yes      | It's unstable because it uses FFI              |
+| Permission Needed | Reason                                         |
+| ----------------- | ---------------------------------------------- |
+| `--allow-env`     | For finding the location of the python library |
+| `--allow-run`     | For finding the location of the python library |
+| `--allow-read`    | For reading the library                        |
+| `--allow-ffi`     | It uses FFI to interact with python            |
+| `--unstable`      | It's unstable because it uses FFI              |
 
 ## Other
 
