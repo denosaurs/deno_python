@@ -458,12 +458,8 @@ export class PyObject {
    */
   asArray() {
     const array: PythonConvertible[] = [];
-    const length = py.PyList_Size(this.handle) as number;
-    for (let i = 0; i < length; i++) {
-      array.push(
-        new PyObject(py.PyList_GetItem(this.handle, i) as Deno.UnsafePointer)
-          .valueOf(),
-      );
+    for (const i of this) {
+      array.push(i.valueOf());
     }
     return array;
   }
@@ -490,18 +486,24 @@ export class PyObject {
     return dict;
   }
 
-  /**
-   * Casts a Set Python object as JS Set value.
-   */
-  asSet() {
-    const set = new Set<PythonConvertible>();
+  *[Symbol.iterator]() {
     const iter = py.PyObject_GetIter(this.handle) as Deno.UnsafePointer;
     let item = py.PyIter_Next(iter) as Deno.UnsafePointer;
     while (item.value !== 0n) {
-      set.add(new PyObject(item).valueOf());
+      yield new PyObject(item);
       item = py.PyIter_Next(iter) as Deno.UnsafePointer;
     }
     py.Py_DecRef(iter);
+  }
+
+  /**
+   * Casts a Set Python object as JS Set object.
+   */
+  asSet() {
+    const set = new Set();
+    for (const i of this) {
+      set.add(i.valueOf());
+    }
     return set;
   }
 
