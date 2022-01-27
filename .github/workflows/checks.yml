@@ -44,5 +44,8 @@ jobs:
         with:
           python-version: '3.8'
 
+      - name: Install NumPy
+        run: pip install numpy
+
       - name: Run deno test
         run: deno test --allow-all --unstable

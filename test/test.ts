@@ -111,3 +111,7 @@ Deno.test("named argument", () => {
     "Hello, world!",
   );
 });
+
+Deno.test("numpy", () => {
+  const _np = python.import("numpy");
+});
