@@ -5,6 +5,12 @@ const lib = Deno.env.get("DENO_PYTHON_PATH") ?? await findLib();
 try {
   // deno-lint-ignore no-inner-declarations no-var
   var py = Deno.dlopen(lib, {
+    PyBaseObject_Type: {
+      // stub
+      parameters: [],
+      result: "void",
+    },
+
     Py_DecodeLocale: {
       parameters: ["pointer", "pointer"],
       result: "pointer",
