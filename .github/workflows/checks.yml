@@ -45,6 +45,7 @@ jobs:
           python-version: '3.9'
 
       - name: Install NumPy
+        runs-on: [windows-latest, ubuntu-latest]
         run: python3 -m pip install numpy
 
       - name: Run deno test
