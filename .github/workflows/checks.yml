@@ -41,11 +41,11 @@ jobs:
 
       - name: Setup Python 3.9
         uses: actions/setup-python@v2
+        if: ${{ matrix.os != 'macos-latest' }}
         with:
           python-version: '3.9'
 
       - name: Install NumPy
-        if: ${{ matrix.os != 'macos-latest' }}
         run: python3 -m pip install numpy
 
       - name: Run deno test
