@@ -1,4 +1,4 @@
-import { findLib } from "./util.ts";
+import { cstr, findLib } from "./util.ts";
 
 const lib = Deno.env.get("DENO_PYTHON_PATH") ?? await findLib();
 
@@ -375,6 +375,30 @@ try {
       result: "pointer",
     },
   }).symbols;
+
+  // On Unix based systems, we need to supply dlopen with RTLD_GLOBAL
+  // but Deno.dlopen does not support passing that flag. So we'll open
+  // libc and use its dlopen to open with RTLD_LAZY | RTLD_GLOBAL to
+  // allow subsequently loaded shared libraries to be able to use symbols
+  // from Python C API.
+  if (Deno.build.os === "linux") {
+    // TODO: is it right to use this symbol?
+    const libc = Deno.dlopen(`libc.so.6`, {
+      __libc_dlopen_mode: {
+        parameters: ["pointer", "i32"],
+        result: "pointer",
+      },
+    });
+    libc.symbols.__libc_dlopen_mode(cstr(lib), 0x00001 | 0x00100);
+  } else if (Deno.build.os === "darwin") {
+    const libc = Deno.dlopen(`libc.dylib`, {
+      dlopen: {
+        parameters: ["pointer", "i32"],
+        result: "pointer",
+      },
+    });
+    libc.symbols.dlopen(cstr(lib), 0x00001 | 0x00100);
+  }
 } catch (e) {
   throw new Error(`Python library not found: ${(e as Error).message}`);
 }

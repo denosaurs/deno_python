@@ -681,6 +681,18 @@ export class Python {
     this.bool = this.builtins.bool;
     this.set = this.builtins.set;
     this.tuple = this.builtins.tuple;
+
+    // Initialize arguments and executable path,
+    // since some modules expect them to be set.
+
+    const sys = this.import("sys");
+    const os = this.import("os");
+
+    sys.argv = [""];
+
+    if (Deno.build.os === "darwin") {
+      sys.executable = os.path.join(sys.exec_prefix, "bin", "python3");
+    }
   }
 
   /**

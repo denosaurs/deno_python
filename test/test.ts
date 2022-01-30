@@ -1,8 +1,11 @@
 import { assert, assertEquals } from "./deps.ts";
 import { NamedArgument, PyObject, python } from "../mod.ts";
 
+const { version, executable } = python.import("sys");
+console.log("Python version:", version);
+console.log("Executable:", executable);
+
 Deno.test("python version", () => {
-  const { version } = python.import("sys");
   assert(String(version).match(/^\d+\.\d+\.\d+/));
 });
 
@@ -110,4 +113,8 @@ Deno.test("named argument", () => {
       .valueOf(),
     "Hello, world!",
   );
+});
+
+Deno.test("numpy", () => {
+  const _np = python.import("numpy");
 });
