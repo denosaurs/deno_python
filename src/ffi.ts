@@ -382,6 +382,7 @@ try {
   // allow subsequently loaded shared libraries to be able to use symbols
   // from Python C API.
   if (Deno.build.os === "linux") {
+    // TODO: is it right to use this symbol?
     const libc = Deno.dlopen(`libc.so.6`, {
       __libc_dlopen_mode: {
         parameters: ["pointer", "i32"],
