@@ -1,4 +1,4 @@
-import { findLib, cstr } from "./util.ts";
+import { cstr, findLib } from "./util.ts";
 
 const lib = Deno.env.get("DENO_PYTHON_PATH") ?? await findLib();
 
@@ -378,7 +378,7 @@ try {
 
   // On Unix based systems, we need to supply dlopen with RTLD_GLOBAL
   // but Deno.dlopen does not support passing that flag. So we'll open
-  // libc and use its dlopen to open with RTLD_LAZY | RTLD_GLOBAL to 
+  // libc and use its dlopen to open with RTLD_LAZY | RTLD_GLOBAL to
   // allow subsequently loaded shared libraries to be able to use symbols
   // from Python C API.
   if (Deno.build.os === "linux") {
