@@ -382,14 +382,25 @@ try {
   // allow subsequently loaded shared libraries to be able to use symbols
   // from Python C API.
   if (Deno.build.os === "linux") {
-    // TODO: is it right to use this symbol?
     const libc = Deno.dlopen(`libc.so.6`, {
-      __libc_dlopen_mode: {
-        parameters: ["pointer", "i32"],
-        result: "pointer",
-      },
+      gnu_get_libc_version: { parameters: [], result: "pointer" },
     });
-    libc.symbols.__libc_dlopen_mode(cstr(lib), 0x00001 | 0x00100);
+    const ptrView = new Deno.UnsafePointerView(
+      libc.symbols.gnu_get_libc_version(),
+    );
+    const glibcVersion = parseFloat(ptrView.getCString());
+
+    const libdl = Deno.dlopen(
+      // starting with glibc 2.34, libdl is merged into libc
+      glibcVersion >= 2.34 ? `libc.so.6` : `libdl.so.2`,
+      {
+        dlopen: {
+          parameters: ["pointer", "i32"],
+          result: "pointer",
+        },
+      },
+    );
+    libdl.symbols.dlopen(cstr(lib), 0x00001 | 0x00100);
   } else if (Deno.build.os === "darwin") {
     const libc = Deno.dlopen(`libc.dylib`, {
       dlopen: {
