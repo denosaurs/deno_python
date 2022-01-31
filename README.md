@@ -8,7 +8,7 @@
 Python interpreter bindings for Deno.
 
 ```ts
-import { python } from "https://deno.land/x/python@0.1.1/mod.ts";
+import { python } from "https://deno.land/x/python@0.1.2/mod.ts";
 
 const np = python.import("numpy");
 const plt = python.import("matplotlib.pyplot");
@@ -23,7 +23,7 @@ plt.show();
 ## Documentation
 
 Check out the docs
-[here](https://doc.deno.land/https://deno.land/x/python@0.1.1/mod.ts).
+[here](https://doc.deno.land/https://deno.land/x/python@0.1.2/mod.ts).
 
 ## Python Installation
 
