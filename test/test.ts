@@ -117,11 +117,29 @@ class Person:
   });
 });
 
-Deno.test("named argument", () => {
-  assertEquals(
-    python.str("Hello, {name}!").format(new NamedArgument("name", "world"))
-      .valueOf(),
-    "Hello, world!",
+Deno.test("named argument", async (t) => {
+  await t.step("single named argument", () => {
+    assertEquals(
+      python.str("Hello, {name}!").format(new NamedArgument("name", "world"))
+        .valueOf(),
+      "Hello, world!",
+    );
+  });
+
+  await t.step(
+    "combination of positional parameters and named argument",
+    () => {
+      const { Test } = python.runModule(`
+class Test:
+  def test(self, *args, **kwargs):
+    return all([len(args) == 3, "name" in kwargs])
+`);
+      const t = new Test();
+
+      const d = python.dict({ a: 1, b: 2 });
+      const v = t.test(1, 2, new NamedArgument("name", "vampire"), d);
+      assertEquals(v.valueOf(), true);
+    },
   );
 });
 

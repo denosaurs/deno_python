@@ -565,13 +565,25 @@ export class PyObject {
     positional: (PythonConvertible | NamedArgument)[] = [],
     named: Record<string, PythonConvertible> = {},
   ) {
-    const args = py.PyTuple_New(positional.length);
+    // count named arguments
+    const namedCount = positional.filter(
+      (arg) => arg instanceof NamedArgument,
+    ).length;
+
+    const positionalCount = positional.length - namedCount;
+    if (positionalCount < 0) {
+      throw new PythonError("Not enough arguments");
+    }
+
+    const args = py.PyTuple_New(positionalCount);
+
+    let startIndex = 0;
     for (let i = 0; i < positional.length; i++) {
       const arg = positional[i];
       if (arg instanceof NamedArgument) {
         named[arg.name] = arg.value;
       } else {
-        py.PyTuple_SetItem(args, i, PyObject.from(arg).owned.handle);
+        py.PyTuple_SetItem(args, startIndex++, PyObject.from(arg).owned.handle);
       }
     }
     const kwargs = py.PyDict_New();
