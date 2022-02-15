@@ -163,6 +163,10 @@ export class PyObject {
       value: () => this.toString(),
     });
 
+    Object.defineProperty(object, Symbol.iterator, {
+      value: () => this[Symbol.iterator](),
+    });
+
     Object.defineProperty(object, ProxiedPyObject, {
       value: this,
       enumerable: false,
