@@ -164,11 +164,7 @@ export class PyObject {
     });
 
     Object.defineProperty(object, Symbol.iterator, {
-      value: function* () {
-        for (const v of scope) {
-          yield v.proxy;
-        }
-      },
+      value: () => this[Symbol.iterator](),
     });
 
     Object.defineProperty(object, ProxiedPyObject, {
