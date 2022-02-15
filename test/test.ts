@@ -105,6 +105,16 @@ class Person:
     list[0] = 42;
     assertEquals(list[0].valueOf(), 42);
   });
+
+  await t.step("list iter", () => {
+    const array = [1, 2, 3];
+    const list = python.list(array);
+    let i = 0;
+    for (const v of list) {
+      assertEquals(v.valueOf(), array[i]);
+      i++;
+    }
+  });
 });
 
 Deno.test("named argument", () => {

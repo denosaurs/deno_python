@@ -163,6 +163,14 @@ export class PyObject {
       value: () => this.toString(),
     });
 
+    Object.defineProperty(object, Symbol.iterator, {
+      value: function* () {
+        for (const v of scope) {
+          yield v.proxy;
+        }
+      },
+    });
+
     Object.defineProperty(object, ProxiedPyObject, {
       value: this,
       enumerable: false,
