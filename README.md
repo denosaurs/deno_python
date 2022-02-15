@@ -1,14 +1,14 @@
 # deno_python
 
 [![Tags](https://img.shields.io/github/release/denosaurs/deno_python)](https://github.com/denosaurs/deno_python/releases)
-[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/python/mod.ts)
+[![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/python@0.1.3/mod.ts)
 [![checks](https://github.com/denosaurs/deno_python/actions/workflows/checks.yml/badge.svg)](https://github.com/denosaurs/deno_python/actions/workflows/checks.yml)
 [![License](https://img.shields.io/github/license/denosaurs/deno_python)](https://github.com/denosaurs/deno_python/blob/master/LICENSE)
 
 Python interpreter bindings for Deno.
 
 ```ts
-import { python } from "https://deno.land/x/python@0.1.2/mod.ts";
+import { python } from "https://deno.land/x/python@0.1.3/mod.ts";
 
 const np = python.import("numpy");
 const plt = python.import("matplotlib.pyplot");
@@ -23,7 +23,7 @@ plt.show();
 ## Documentation
 
 Check out the docs
-[here](https://doc.deno.land/https://deno.land/x/python@0.1.2/mod.ts).
+[here](https://doc.deno.land/https://deno.land/x/python@0.1.3/mod.ts).
 
 ## Python Installation
 
@@ -53,10 +53,6 @@ If the module fails to find Python, you can add the path to the Python in the
 | `--unstable`      | It's unstable because it uses FFI              |
 
 ## Other
-
-### Related
-
-- [python](https://www.python.org/)
 
 ### Contribution
 
