@@ -1,417 +1,70 @@
-import { cstr, findLib } from "./util.ts";
-
-const lib = Deno.env.get("DENO_PYTHON_PATH") ?? await findLib();
-
-try {
-  // deno-lint-ignore no-inner-declarations no-var
-  var py = Deno.dlopen(lib, {
-    Py_DecodeLocale: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    Py_SetProgramName: {
-      parameters: ["pointer"],
-      result: "void",
-    },
-
-    Py_Initialize: {
-      parameters: [],
-      result: "void",
-    },
-
-    Py_IncRef: {
-      parameters: ["pointer"],
-      result: "void",
-    },
-
-    Py_DecRef: {
-      parameters: ["pointer"],
-      result: "void",
-    },
-
-    PyImport_ImportModule: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyEval_GetBuiltins: {
-      parameters: [],
-      result: "pointer",
-    },
-
-    PyRun_SimpleString: {
-      parameters: ["pointer"],
-      result: "i32",
-    },
-
-    PyErr_Occurred: {
-      parameters: [],
-      result: "pointer",
-    },
-
-    PyErr_Clear: {
-      parameters: [],
-      result: "void",
-    },
-
-    PyErr_Fetch: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "void",
-    },
-
-    PyDict_New: {
-      parameters: [],
-      result: "pointer",
-    },
-
-    PyDict_SetItemString: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyObject_GetItem: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyObject_SetItem: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyObject_DelItem: {
-      parameters: ["pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyObject_Call: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyObject_CallObject: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyObject_GetAttrString: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyObject_SetAttrString: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyObject_HasAttrString: {
-      parameters: ["pointer", "pointer"],
-      result: "i32",
-    },
-
-    PySlice_New: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyTuple_New: {
-      parameters: ["i32"],
-      result: "pointer",
-    },
-
-    PyTuple_SetItem: {
-      parameters: ["pointer", "i32", "pointer"],
-      result: "i32",
-    },
-
-    PyObject_RichCompare: {
-      parameters: ["pointer", "pointer", "i32"],
-      result: "pointer",
-    },
-
-    PyObject_RichCompareBool: {
-      parameters: ["pointer", "pointer", "i32"],
-      result: "i32",
-    },
-
-    PyDict_Next: {
-      parameters: ["pointer", "pointer", "pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyDict_SetItem: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyIter_Next: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyObject_GetIter: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyList_New: {
-      parameters: ["i32"],
-      result: "pointer",
-    },
-
-    PyList_SetItem: {
-      parameters: ["pointer", "i32", "pointer"],
-      result: "i32",
-    },
-
-    PyBool_FromLong: {
-      parameters: ["i32"],
-      result: "pointer",
-    },
-
-    PyFloat_AsDouble: {
-      parameters: ["pointer"],
-      result: "f64",
-    },
-
-    PyFloat_FromDouble: {
-      parameters: ["f64"],
-      result: "pointer",
-    },
-
-    PyLong_AsLong: {
-      parameters: ["pointer"],
-      result: "i32",
-    },
-
-    PyLong_FromLong: {
-      parameters: ["i32"],
-      result: "pointer",
-    },
-
-    PyLong_AsUnsignedLongMask: {
-      parameters: ["pointer"],
-      result: "u32",
-    },
-
-    PyLong_FromUnsignedLong: {
-      parameters: ["u32"],
-      result: "pointer",
-    },
-
-    PyUnicode_AsUTF8: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyUnicode_DecodeUTF8: {
-      parameters: ["pointer", "i32", "pointer"],
-      result: "pointer",
-    },
-
-    PyBytes_FromStringAndSize: {
-      parameters: ["pointer", "i32"],
-      result: "pointer",
-    },
-
-    PyBytes_AsStringAndSize: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyBool_Type: {
-      parameters: [],
-      result: "pointer",
-    },
-
-    PySlice_Type: {
-      parameters: [],
-      result: "pointer",
-    },
-
-    PyNumber_Add: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_Subtract: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_Multiply: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_TrueDivide: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_InPlaceAdd: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_InPlaceSubtract: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_InPlaceMultiply: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_InPlaceTrueDivide: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_Negative: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_And: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_Or: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_Xor: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_InPlaceAnd: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_InPlaceOr: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_InPlaceXor: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyNumber_Invert: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyList_Size: {
-      parameters: ["pointer"],
-      result: "i32",
-    },
-
-    PyList_GetItem: {
-      parameters: ["pointer", "i32"],
-      result: "pointer",
-    },
-
-    PyObject_Type: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyObject_Str: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyDict_Keys: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PyDict_GetItem: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PySet_New: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
-
-    PySet_Add: {
-      parameters: ["pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyImport_ExecCodeModule: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyObject_IsInstance: {
-      parameters: ["pointer", "pointer"],
-      result: "i32",
-    },
-
-    PyDict_GetItemString: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
-
-    PyTuple_Size: {
-      parameters: ["pointer"],
-      result: "i32",
-    },
-
-    PyTuple_GetItem: {
-      parameters: ["pointer", "i32"],
-      result: "pointer",
-    },
-  }).symbols;
-
-  // On Unix based systems, we need to supply dlopen with RTLD_GLOBAL
-  // but Deno.dlopen does not support passing that flag. So we'll open
-  // libc and use its dlopen to open with RTLD_LAZY | RTLD_GLOBAL to
-  // allow subsequently loaded shared libraries to be able to use symbols
-  // from Python C API.
-  if (Deno.build.os === "linux") {
-    const libc = Deno.dlopen(`libc.so.6`, {
-      gnu_get_libc_version: { parameters: [], result: "pointer" },
-    });
-    const ptrView = new Deno.UnsafePointerView(
-      libc.symbols.gnu_get_libc_version(),
+import { SYMBOLS } from "./symbols.ts";
+import { postSetup } from "./util.ts";
+
+const searchPath: string[] = [];
+
+const SUPPORTED_VERSIONS = [[3, 9], [3, 10], [3, 8]];
+const DENO_PYTHON_PATH = Deno.env.get("DENO_PYTHON_PATH");
+
+if (DENO_PYTHON_PATH) {
+  searchPath.push(DENO_PYTHON_PATH);
+} else {
+  if (Deno.build.os === "windows" || Deno.build.os === "linux") {
+    searchPath.push(
+      ...SUPPORTED_VERSIONS.map(([major, minor]) =>
+        `${Deno.build.os === "linux" ? "lib" : ""}python${major}${
+          Deno.build.os === "linux" ? "." : ""
+        }${minor}.${Deno.build.os === "linux" ? "so" : "dll"}`
+      ),
     );
-    const glibcVersion = parseFloat(ptrView.getCString());
-
-    const libdl = Deno.dlopen(
-      // starting with glibc 2.34, libdl is merged into libc
-      glibcVersion >= 2.34 ? `libc.so.6` : `libdl.so.2`,
-      {
-        dlopen: {
-          parameters: ["pointer", "i32"],
-          result: "pointer",
-        },
-      },
-    );
-    libdl.symbols.dlopen(cstr(lib), 0x00001 | 0x00100);
   } else if (Deno.build.os === "darwin") {
-    const libc = Deno.dlopen(`libc.dylib`, {
-      dlopen: {
-        parameters: ["pointer", "i32"],
-        result: "pointer",
-      },
-    });
-    libc.symbols.dlopen(cstr(lib), 0x00001 | 0x00100);
+    for (
+      const framework of [
+        "/opt/homebrew/Frameworks/Python.framework/Versions",
+        "/usr/local/Frameworks/Python.framework/Versions",
+      ]
+    ) {
+      for (const [major, minor] of SUPPORTED_VERSIONS) {
+        searchPath.push(`${framework}/${major}.${minor}/Python`);
+      }
+    }
+  } else {
+    throw new Error(`Unsupported OS: ${Deno.build.os}`);
   }
-} catch (e) {
-  throw new Error(`Python library not found: ${(e as Error).message}`);
+}
+
+let py!: Deno.DynamicLibrary<typeof SYMBOLS>["symbols"];
+
+for (const path of searchPath) {
+  try {
+    py = Deno.dlopen(path, SYMBOLS).symbols;
+    postSetup(path);
+    break;
+  } catch (_) {
+    continue;
+  }
+}
+
+const LIBRARY_NOT_FOUND = new Error(`
+Could not find Python library!
+
+Tried searching for these versions:
+${searchPath.map((e) => "  " + e).join("\n")}
+
+Make sure you have a supported version of Python
+installed on your system, which should be one of
+these: ${SUPPORTED_VERSIONS.map((e) => `${e[0]}.${e[1]}`).join(", ")}
+
+If the module still somehow fails to find it,
+you can open an issue: https://github.com/denosaurs/deno_python/issues
+
+However, if your Python distribution is not in search
+path, you can set DENO_PYTHON_PATH env variable pointing
+to dll/dylib/so file for Python library.
+`);
+
+if (typeof py !== "object") {
+  throw LIBRARY_NOT_FOUND;
 }
 
 export { py };
