@@ -1,155 +1,41 @@
-import {
-  dirname,
-  join,
-  resolve,
-} from "https://deno.land/std@0.119.0/path/mod.ts";
-
 export const encoder = new TextEncoder();
 export const decoder = new TextDecoder();
 
-const prefix = Deno.build.os === "windows" ? "" : "lib";
-const extension = Deno.build.os === "windows"
-  ? "dll"
-  : Deno.build.os === "darwin"
-  ? "dylib"
-  : "so";
-const versions = [[3, 9], [3, 10], [3, 8]];
+// On Unix based systems, we need to supply dlopen with RTLD_GLOBAL
+// but Deno.dlopen does not support passing that flag. So we'll open
+// libc and use its dlopen to open with RTLD_LAZY | RTLD_GLOBAL to
+// allow subsequently loaded shared libraries to be able to use symbols
+// from Python C API.
+export function postSetup(lib: string) {
+  if (Deno.build.os === "linux") {
+    const libc = Deno.dlopen(`libc.so.6`, {
+      gnu_get_libc_version: { parameters: [], result: "pointer" },
+    });
+    const ptrView = new Deno.UnsafePointerView(
+      libc.symbols.gnu_get_libc_version(),
+    );
+    const glibcVersion = parseFloat(ptrView.getCString());
 
-async function exists(file: string): Promise<boolean> {
-  try {
-    await Deno.lstat(file);
-    return true;
-  } catch (err) {
-    if (err instanceof Deno.errors.NotFound) {
-      return false;
-    }
-    throw err;
+    const libdl = Deno.dlopen(
+      // starting with glibc 2.34, libdl is merged into libc
+      glibcVersion >= 2.34 ? `libc.so.6` : `libdl.so.2`,
+      {
+        dlopen: {
+          parameters: ["pointer", "i32"],
+          result: "pointer",
+        },
+      },
+    );
+    libdl.symbols.dlopen(cstr(lib), 0x00001 | 0x00100);
+  } else if (Deno.build.os === "darwin") {
+    const libc = Deno.dlopen(`libc.dylib`, {
+      dlopen: {
+        parameters: ["pointer", "i32"],
+        result: "pointer",
+      },
+    });
+    libc.symbols.dlopen(cstr(lib), 0x00001 | 0x00100);
   }
-}
-
-async function where(name: string): Promise<string[]> {
-  return decoder.decode(
-    await Deno.run({
-      cmd: ["where", name],
-      stdin: "null",
-      stderr: "null",
-      stdout: "piped",
-    }).output(),
-  ).split("\r\n").filter((path) => path !== "").map((path) => resolve(path));
-}
-
-async function find(path: string, name: string): Promise<string[]> {
-  return decoder.decode(
-    await Deno.run({
-      cmd: ["find", path, "-name", name],
-      stdin: "null",
-      stderr: "null",
-      stdout: "piped",
-    }).output(),
-  ).split("\n").filter((path) => path !== "").map((path) => resolve(path));
-}
-
-async function search(path: string): Promise<string[]> {
-  const found = [];
-
-  for (const [major, minor] of versions) {
-    const version = Deno.build.os === "windows"
-      ? `${major}${minor}`
-      : `${major}.${minor}`;
-    const filename = `${prefix}python${version}.${extension}`;
-    const file = resolve(join(path, filename));
-
-    if (await exists(file)) {
-      found.push(file);
-    }
-  }
-
-  return found;
-}
-
-async function findLibs(): Promise<string[]> {
-  const libs: string[] = [];
-
-  if (Deno.build.os === "windows") {
-    for (const location of await where("python*.dll")) {
-      libs.push(resolve(location));
-    }
-
-    for (const location of (await where("python*")).map(dirname)) {
-      libs.concat(await search(location));
-    }
-  } else {
-    const paths = [];
-
-    if (Deno.build.os === "darwin") {
-      // We don't look in /System/Library because it's Python version
-      // is outdated.
-      const libs = [];
-
-      for (
-        const framework of [
-          "/opt/homebrew/Frameworks/Python.framework/Versions",
-          "/usr/local/Frameworks/Python.framework/Versions",
-        ]
-      ) {
-        for (const [major, minor] of versions) {
-          const path = `${framework}/${major}.${minor}/Python`;
-          if (await exists(path)) {
-            libs.push(path);
-          }
-        }
-      }
-
-      return libs;
-    } else {
-      paths.push("/usr/lib", "/lib");
-    }
-
-    for (const path of paths) {
-      for (
-        const location of await find(path, `libpython*.${extension}`)
-      ) {
-        libs.push(resolve(location));
-      }
-    }
-  }
-
-  for (
-    const location of Deno.env.get(
-      Deno.build.os === "windows" ? "PATH" : "LD_LIBRARY_PATH",
-    )?.split(Deno.build.os === "windows" ? ";" : ":") ?? []
-  ) {
-    libs.concat(await search(location));
-  }
-
-  return [...new Set(libs)];
-}
-
-export async function findLib(): Promise<string> {
-  const candidates = await findLibs();
-
-  for (const [major, minor] of versions) {
-    const version = Deno.build.os === "windows"
-      ? `${major}${minor}`
-      : `${major}.${minor}`;
-    const filename = `${prefix}python${version}.${extension}`;
-
-    for (const candidate of candidates) {
-      if (
-        candidate.endsWith(filename) ||
-        (Deno.build.os === "darwin" &&
-          candidate.endsWith(`/${major}.${minor}/Python`))
-      ) {
-        return candidate;
-      }
-    }
-  }
-
-  throw new Error(
-    `Could not find python library, try setting the environmental variable DENO_PYTHON_PATH or installing one of the following versions of python: ${
-      versions.map(([major, minor]) => `v${major}.${minor}`).join(", ")
-    }`,
-  );
 }
 
 /**
