@@ -45,8 +45,26 @@ for (const path of searchPath) {
   }
 }
 
+const LIBRARY_NOT_FOUND = new Error(`
+Could not find Python library!
+
+Tried searching for these versions:
+${searchPath.map((e) => "  " + e).join("\n")}
+
+Make sure you have a supported version of Python
+installed on your system, which should be one of
+these: ${SUPPORTED_VERSIONS.map((e) => `${e[0]}.${e[1]}`).join(", ")}
+
+If the module still somehow fails to find it,
+you can open an issue: https://github.com/denosaurs/deno_python/issues
+
+However, if your Python distribution is not in search
+path, you can set DENO_PYTHON_PATH env variable pointing
+to dll/dylib/so file for Python library.
+`);
+
 if (typeof py !== "object") {
-  throw new Error("Python not found");
+  throw LIBRARY_NOT_FOUND;
 }
 
 export { py };
