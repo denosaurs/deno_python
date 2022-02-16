@@ -12,9 +12,9 @@ if (DENO_PYTHON_PATH) {
   if (Deno.build.os === "windows" || Deno.build.os === "linux") {
     searchPath.push(
       ...SUPPORTED_VERSIONS.map(([major, minor]) =>
-        `${Deno.build.os === "linux" ? "lib" : ""}python${major}${minor}.${
-          Deno.build.os === "linux" ? "so" : "dll"
-        }`
+        `${Deno.build.os === "linux" ? "lib" : ""}python${major}${
+          Deno.build.os === "linux" ? "." : ""
+        }${minor}.${Deno.build.os === "linux" ? "so" : "dll"}`
       ),
     );
   } else if (Deno.build.os === "darwin") {
