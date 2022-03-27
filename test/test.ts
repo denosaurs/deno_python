@@ -1,5 +1,5 @@
 import { assert, assertEquals } from "./deps.ts";
-import { NamedArgument, PyObject, python } from "../mod.ts";
+import { NamedArgument, PyObject, python, PythonLoader } from "../mod.ts";
 
 const { version, executable } = python.import("sys");
 console.log("Python version:", version);
@@ -145,4 +145,33 @@ class Test:
 
 Deno.test("numpy", () => {
   const _np = python.import("numpy");
+});
+
+// using ambient namespace is much nicer
+declare namespace __Numpy__ {
+  export {}; // no default export behavior
+
+  export const Inf: number;
+
+  // deno-lint-ignore no-shadow-restricted-names
+  export const Infinity: number;
+}
+
+// implementors would then just export the type
+type Numpy = typeof __Numpy__;
+
+Deno.test("typed loader", () => {
+  const loader = new PythonLoader<{
+    numpy: Numpy;
+  }>(python);
+
+  const np = loader.import("numpy");
+
+  function takeNum(_n: number) {}
+
+  takeNum(np.Inf);
+  takeNum(np.Infinity);
+
+  // @ts-expect-error Should be an invalid name.
+  loader.import("not-a-mod");
 });
