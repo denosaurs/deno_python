@@ -756,6 +756,19 @@ export class Python {
   import(name: string) {
     return this.importObject(name).proxy;
   }
+
+  createTypedLoader<
+    ModuleMap extends {
+      readonly [_: string]: { readonly [_: string]: unknown };
+    } = Record<
+      never,
+      never
+    >,
+  >(): { import: <K extends keyof ModuleMap>(name: K) => ModuleMap[K] } {
+    return {
+      import: this.import.bind(this) as any,
+    };
+  }
 }
 
 /**

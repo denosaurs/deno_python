@@ -1,5 +1,5 @@
 import { assert, assertEquals } from "./deps.ts";
-import { NamedArgument, PyObject, python, PythonLoader } from "../mod.ts";
+import { NamedArgument, PyObject, python } from "../mod.ts";
 
 const { version, executable } = python.import("sys");
 console.log("Python version:", version);
@@ -161,9 +161,9 @@ declare namespace Numpy {
 type Numpy = typeof Numpy;
 
 Deno.test("typed loader", () => {
-  const loader = new PythonLoader<{
+  const loader = python.createTypedLoader<{
     numpy: Numpy;
-  }>(python);
+  }>();
 
   const np = loader.import("numpy");
 
