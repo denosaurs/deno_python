@@ -148,7 +148,7 @@ Deno.test("numpy", () => {
 });
 
 // using ambient namespace is much nicer
-declare namespace __Numpy__ {
+declare namespace Numpy {
   export {}; // no default export behavior
 
   export const Inf: number;
@@ -158,7 +158,7 @@ declare namespace __Numpy__ {
 }
 
 // implementors would then just export the type
-type Numpy = typeof __Numpy__;
+type Numpy = typeof Numpy;
 
 Deno.test("typed loader", () => {
   const loader = new PythonLoader<{
