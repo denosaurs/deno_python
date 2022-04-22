@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-explicit-any no-fallthrough
 import { py } from "./ffi.ts";
-import { cstr } from "./util.ts";
+import { cstr, SliceItemRegExp } from "./util.ts";
 
 /**
  * Symbol used on proxied Python objects to point to the original PyObject object.
@@ -215,6 +215,17 @@ export class PyObject {
           }
         }
 
+        if (typeof name === "string" && isSlice(name)) {
+          const slice = toSlice(name);
+          const item = py.PyObject_GetItem(
+            this.handle,
+            slice.handle,
+          ) as Deno.UnsafePointer;
+          if (item.value !== 0n) {
+            return new PyObject(item).proxy;
+          }
+        }
+
         // Don't wanna throw errors when accessing properties.
         const attr = this.maybeGetAttr(String(name))?.proxy;
 
@@ -252,6 +263,14 @@ export class PyObject {
           py.PyList_SetItem(
             this.handle,
             Number(name),
+            PyObject.from(value).handle,
+          );
+          return true;
+        } else if (isSlice(name)) {
+          const slice = toSlice(name);
+          py.PyObject_SetItem(
+            this.handle,
+            slice.handle,
             PyObject.from(value).handle,
           );
           return true;
@@ -783,3 +802,47 @@ export class Python {
  * this object, such as `str`, `int`, `tuple`, etc.
  */
 export const python = new Python();
+
+/**
+ * Returns true if the value can be converted into a Python slice or
+ * slice tuple.
+ */
+function isSlice(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  if (!value.includes(":")) return false;
+  return value
+    .split(",")
+    .map((item) => SliceItemRegExp.test(item) || /^\s*-?\d+\s*$/.test(item))
+    .reduce((a, b) => a && b, true);
+}
+
+/**
+ * Returns a PyObject that is either a slice or a tuple of slices.
+ */
+function toSlice(sliceList: string): PyObject {
+  if (sliceList.includes(",")) {
+    const pySlicesHandle = sliceList.split(",")
+      .map(toSlice)
+      .map((pyObject) => pyObject.handle);
+    const pyTupleHandle = (py as any).PyTuple_Pack(
+      pySlicesHandle.length,
+      ...pySlicesHandle,
+    );
+    return new PyObject(pyTupleHandle);
+  } else if (/^\s*-?\d+\s*$/.test(sliceList)) {
+    return PyObject.from(parseInt(sliceList));
+  } else {
+    const [start, stop, step] = sliceList
+      .split(":")
+      .map((
+        bound,
+      ) => (/^\s*-?\d+\s*$/.test(bound) ? parseInt(bound) : undefined));
+
+    const pySliceHandle = py.PySlice_New(
+      PyObject.from(start).handle,
+      PyObject.from(stop).handle,
+      PyObject.from(step).handle,
+    );
+    return new PyObject(pySliceHandle);
+  }
+}
