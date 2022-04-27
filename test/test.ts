@@ -43,7 +43,13 @@ Deno.test("types", async (t) => {
 
   await t.step("dict", () => {
     const value = python.dict({ a: 1, b: 2 });
-    assertEquals(value.valueOf(), new Map([["a", 1], ["b", 2]]));
+    assertEquals(
+      value.valueOf(),
+      new Map([
+        ["a", 1],
+        ["b", 2],
+      ]),
+    );
   });
 
   await t.step("set", () => {
@@ -126,7 +132,9 @@ class Person:
 Deno.test("named argument", async (t) => {
   await t.step("single named argument", () => {
     assertEquals(
-      python.str("Hello, {name}!").format(new NamedArgument("name", "world"))
+      python
+        .str("Hello, {name}!")
+        .format(new NamedArgument("name", "world"))
         .valueOf(),
       "Hello, world!",
     );
@@ -170,4 +178,88 @@ Deno.test("custom proxy", () => {
 
   // Then, we use the wrapped proxy as if it were an original PyObject
   assertEquals(np.add(arr, 2).tolist().valueOf(), [3, 4, 5]);
+});
+
+Deno.test("slice", async (t) => {
+  await t.step("get", () => {
+    const list = python.list([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    assertEquals(list["1:"].valueOf(), [2, 3, 4, 5, 6, 7, 8, 9]);
+    assertEquals(list["1:2"].valueOf(), [2]);
+    assertEquals(list[":2"].valueOf(), [1, 2]);
+    assertEquals(list[":2:"].valueOf(), [1, 2]);
+    assertEquals(list["0:3:2"].valueOf(), [1, 3]);
+    assertEquals(list["-2:"].valueOf(), [8, 9]);
+    assertEquals(list["::2"].valueOf(), [1, 3, 5, 7, 9]);
+  });
+
+  await t.step("set", () => {
+    const np = python.import("numpy");
+    let list = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    list["1:"] = -5;
+    assertEquals(list.tolist().valueOf(), [1, -5, -5, -5, -5, -5, -5, -5, -5]);
+
+    list = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    list["1::3"] = -5;
+    assertEquals(list.tolist().valueOf(), [1, -5, 3, 4, -5, 6, 7, -5, 9]);
+
+    list = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    list["1:2:3"] = -5;
+    assertEquals(list.tolist().valueOf(), [1, -5, 3, 4, 5, 6, 7, 8, 9]);
+  });
+});
+
+Deno.test("slice list", async (t) => {
+  const np = python.import("numpy");
+
+  await t.step("get", () => {
+    const array = np.array([
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9],
+    ]);
+    assertEquals(array["0, :"].tolist().valueOf(), [1, 2, 3]);
+    assertEquals(array["1:, ::2"].tolist().valueOf(), [
+      [4, 6],
+      [7, 9],
+    ]);
+    assertEquals(array["1:, 0"].tolist().valueOf(), [4, 7]);
+  });
+
+  await t.step("set", () => {
+    const array = np.arange(15).reshape(3, 5);
+    array["1:, ::2"] = -99;
+    assertEquals(array.tolist().valueOf(), [
+      [0, 1, 2, 3, 4],
+      [-99, 6, -99, 8, -99],
+      [-99, 11, -99, 13, -99],
+    ]);
+  });
+
+  await t.step("whitespaces", () => {
+    const array = np.array([
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9],
+    ]);
+    assertEquals(array[" 1  :  , : :  2         "].tolist().valueOf(), [
+      [4, 6],
+      [7, 9],
+    ]);
+  });
+
+  await t.step("3d slicing", () => {
+    const a3 = np.array([[[10, 11, 12], [13, 14, 15], [16, 17, 18]], [
+      [20, 21, 22],
+      [23, 24, 25],
+      [26, 27, 28],
+    ], [[30, 31, 32], [33, 34, 35], [36, 37, 38]]]);
+
+    assertEquals(a3["0, :, 1"].tolist().valueOf(), [11, 14, 17]);
+  });
+
+  await t.step("ellipsis", () => {
+    const a4 = np.arange(16).reshape(2, 2, 2, 2);
+
+    assertEquals(a4["1, ..., 1"].tolist().valueOf(), [[9, 11], [13, 15]]);
+  });
 });

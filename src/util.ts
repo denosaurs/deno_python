@@ -52,3 +52,11 @@ export function cstr(str: string): Uint8Array {
   encoder.encodeInto(str, buf);
   return buf;
 }
+
+/**
+ * Regular Expression used to test if a string is a `proper_slice`.
+ *
+ * Based on https://docs.python.org/3/reference/expressions.html#slicings
+ */
+export const SliceItemRegExp =
+  /^\s*(-?\d+)?\s*:\s*(-?\d+)?\s*(:\s*(-?\d+)?\s*)?$/;
