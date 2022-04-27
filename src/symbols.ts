@@ -370,8 +370,6 @@ export const SYMBOLS = {
   },
 
   PyTuple_Pack: {
-    // TODO: This function should have variable length arguments
-    parameters: ["i32", "pointer", "pointer"],
-    result: "pointer",
+    type: "pointer",
   },
 } as const;

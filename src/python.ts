@@ -718,6 +718,8 @@ export class Python {
   tuple: any;
   /** Python `None` type proxied object */
   None: any;
+  /** Python `Ellipsis` type proxied object */
+  Ellipsis: any;
 
   constructor() {
     py.Py_Initialize();
@@ -732,6 +734,7 @@ export class Python {
     this.bool = this.builtins.bool;
     this.set = this.builtins.set;
     this.tuple = this.builtins.tuple;
+    this.Ellipsis = this.builtins.Ellipsis;
 
     // Initialize arguments and executable path,
     // since some modules expect them to be set.
@@ -808,10 +811,14 @@ export const python = new Python();
  */
 function isSlice(value: unknown): boolean {
   if (typeof value !== "string") return false;
-  if (!value.includes(":")) return false;
+  if (!value.includes(":") && !value.includes("...")) return false;
   return value
     .split(",")
-    .map((item) => SliceItemRegExp.test(item) || /^\s*-?\d+\s*$/.test(item))
+    .map((item) => (
+      SliceItemRegExp.test(item) || // Slice
+      /^\s*-?\d+\s*$/.test(item) || // Number
+      /^\s*\.\.\.\s*$/.test(item) // Ellipsis
+    ))
     .reduce((a, b) => a && b, true);
 }
 
@@ -823,13 +830,21 @@ function toSlice(sliceList: string): PyObject {
     const pySlicesHandle = sliceList.split(",")
       .map(toSlice)
       .map((pyObject) => pyObject.handle);
-    const pyTupleHandle = (py as any).PyTuple_Pack(
+
+    const pyTuple_Pack = new Deno.UnsafeFnPointer(py.PyTuple_Pack, {
+      parameters: ["i32", ...pySlicesHandle.map(() => "pointer" as const)],
+      result: "pointer",
+    });
+
+    const pyTupleHandle = pyTuple_Pack.call(
       pySlicesHandle.length,
       ...pySlicesHandle,
     );
     return new PyObject(pyTupleHandle);
   } else if (/^\s*-?\d+\s*$/.test(sliceList)) {
     return PyObject.from(parseInt(sliceList));
+  } else if (/^\s*\.\.\.\s*$/.test(sliceList)) {
+    return PyObject.from(python.Ellipsis);
   } else {
     const [start, stop, step] = sliceList
       .split(":")
