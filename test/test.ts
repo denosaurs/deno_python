@@ -48,7 +48,7 @@ Deno.test("types", async (t) => {
       new Map([
         ["a", 1],
         ["b", 2],
-      ])
+      ]),
     );
   });
 
@@ -136,7 +136,7 @@ Deno.test("named argument", async (t) => {
         .str("Hello, {name}!")
         .format(new NamedArgument("name", "world"))
         .valueOf(),
-      "Hello, world!"
+      "Hello, world!",
     );
   });
 
@@ -153,7 +153,7 @@ class Test:
       const d = python.dict({ a: 1, b: 2 });
       const v = t.test(1, 2, new NamedArgument("name", "vampire"), d);
       assertEquals(v.valueOf(), true);
-    }
+    },
   );
 });
 

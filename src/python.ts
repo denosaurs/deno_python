@@ -365,9 +365,8 @@ export class PyObject {
         } else {
           const dict = py.PyDict_New() as Deno.UnsafePointer;
           for (
-            const [key, value] of (v instanceof Map
-              ? v.entries()
-              : Object.entries(v))
+            const [key, value]
+              of (v instanceof Map ? v.entries() : Object.entries(v))
           ) {
             const keyObj = PyObject.from(key);
             const valueObj = PyObject.from(value);
