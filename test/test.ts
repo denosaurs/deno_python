@@ -1,5 +1,11 @@
 import { assert, assertEquals } from "./deps.ts";
-import { NamedArgument, PyObject, python } from "../mod.ts";
+import {
+  NamedArgument,
+  ProxiedPyObject,
+  PyObject,
+  python,
+  PythonProxy,
+} from "../mod.ts";
 
 const { version, executable } = python.import("sys");
 console.log("Python version:", version);
@@ -145,4 +151,23 @@ class Test:
 
 Deno.test("numpy", () => {
   const _np = python.import("numpy");
+});
+
+Deno.test("custom proxy", () => {
+  const np = python.import("numpy");
+
+  // We declare our own PythonProxy wrapper
+  const CustomProxy = class implements PythonProxy {
+    public readonly [ProxiedPyObject]: PyObject;
+
+    constructor(array: PythonProxy) {
+      this[ProxiedPyObject] = array[ProxiedPyObject];
+    }
+  };
+
+  // Wrap the result in our custom wrapper
+  const arr = new CustomProxy(np.array([1, 2, 3]));
+
+  // Then, we use the wrapped proxy as if it were an original PyObject
+  assertEquals(np.add(arr, 2).tolist().valueOf(), [3, 4, 5]);
 });

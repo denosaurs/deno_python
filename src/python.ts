@@ -3,6 +3,24 @@ import { py } from "./ffi.ts";
 import { cstr } from "./util.ts";
 
 /**
+ * Symbol used on proxied Python objects to point to the original PyObject object.
+ * Can be used to implement PythonProxy and create your own proxies.
+ *
+ * See `PyObject#proxy` for more info on proxies.
+ */
+export const ProxiedPyObject = Symbol("ProxiedPyObject");
+
+/**
+ * Proxied Python object.
+ *
+ * When an object implements this interface, the object will not be converted
+ * to a Python Object and the original PyObject will be used.
+ */
+export interface PythonProxy {
+  [ProxiedPyObject]: PyObject;
+}
+
+/**
  * JS types that can be converted to Python Objects.
  *
  * - `number` becomes `int` or `float` depending on its value.
@@ -30,6 +48,8 @@ import { cstr } from "./util.ts";
  * - `Set` becomes `set` in Python.
  *
  * If you pass a PyObject, it is used as-is.
+ *
+ * If you pass a PythonProxy, its original PyObject will be used.
  */
 export type PythonConvertible =
   | number
@@ -41,17 +61,11 @@ export type PythonConvertible =
   | string
   // deno-lint-ignore ban-types
   | Symbol
+  | PythonProxy
   | PythonConvertible[]
   | { [key: string]: PythonConvertible }
   | Map<PythonConvertible, PythonConvertible>
   | Set<PythonConvertible>;
-
-/**
- * Symbol used on proxied Python objects to point to the original PyObject object.
- *
- * See `PyObject#proxy` for more info on proxies.
- */
-export const ProxiedPyObject = Symbol("ProxiedPyObject");
 
 /**
  * An argument that can be passed to PyObject calls to indicate that the
@@ -310,6 +324,9 @@ export class PyObject {
       case "object": {
         if (v === null) {
           return python.builtins.None[ProxiedPyObject];
+        } else if (ProxiedPyObject in v) {
+          const proxy = v as PythonProxy;
+          return proxy[ProxiedPyObject];
         } else if (Array.isArray(v)) {
           const list = py.PyList_New(v.length) as Deno.UnsafePointer;
           for (let i = 0; i < v.length; i++) {
