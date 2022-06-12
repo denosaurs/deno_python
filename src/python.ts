@@ -65,7 +65,13 @@ export type PythonConvertible =
   | PythonConvertible[]
   | { [key: string]: PythonConvertible }
   | Map<PythonConvertible, PythonConvertible>
-  | Set<PythonConvertible>;
+  | Set<PythonConvertible>
+  | PythonJSCallback;
+
+export type PythonJSCallback = (
+  kwargs: Record<string, any>,
+  ...args: any[]
+) => PythonConvertible;
 
 /**
  * An argument that can be passed to PyObject calls to indicate that the
@@ -83,6 +89,20 @@ export class NamedArgument {
     this.value = PyObject.from(value);
   }
 }
+
+const getfnptr = Deno.dlopen("./dummy.so", {
+  ptr: {
+    parameters: [
+      {
+        function: {
+          parameters: ["pointer", "pointer", "pointer"],
+          result: "pointer",
+        },
+      },
+    ],
+    result: "pointer",
+  },
+} as any).symbols.ptr as (fn: CallableFunction) => Deno.UnsafePointer;
 
 /**
  * Represents a Python object.
@@ -400,7 +420,44 @@ export class PyObject {
 
       case "function": {
         if (ProxiedPyObject in v) {
-          return v[ProxiedPyObject];
+          return (v as any)[ProxiedPyObject];
+        } else {
+          const resource = (Deno as any).registerCallback(
+            {
+              parameters: ["pointer", "pointer", "pointer"],
+              result: "pointer",
+            },
+            (
+              _self: bigint,
+              args: bigint,
+              kwargs: bigint,
+            ) => {
+              return PyObject.from(v(
+                kwargs === 0n ? {} : Object.fromEntries(
+                  new PyObject(new Deno.UnsafePointer(kwargs)).asDict()
+                    .entries(),
+                ),
+                ...(args === 0n
+                  ? []
+                  : new PyObject(new Deno.UnsafePointer(args)).valueOf()),
+              )).handle;
+            },
+          );
+          const ptr = getfnptr(resource);
+          const struct = new Uint8Array(8 + 8 + 4 + 8);
+          const view = new DataView(struct.buffer);
+          const LE =
+            new Uint8Array(new Uint32Array([0x12345678]).buffer)[0] !== 0x7;
+          const nameBuf = new TextEncoder().encode(
+            (v.name || "anonymous") + "\0",
+          );
+          const docBuf = nameBuf;
+          view.setBigUint64(0, Deno.UnsafePointer.of(nameBuf).value, LE);
+          view.setBigUint64(8, ptr.value, LE);
+          view.setInt32(16, 0x1 | 0x2, LE);
+          view.setBigUint64(20, Deno.UnsafePointer.of(docBuf).value, LE);
+          const fn = py.PyCFunction_New(struct, PyObject.from(null).handle);
+          return new PyObject(fn);
         }
       }
 

@@ -263,3 +263,34 @@ Deno.test("slice list", async (t) => {
     assertEquals(a4["1, ..., 1"].tolist().valueOf(), [[9, 11], [13, 15]]);
   });
 });
+
+Deno.test("async", () => {
+  const { test } = python.runModule(
+    `
+async def test():
+  return "ok"
+  `,
+    "async_test.py",
+  );
+  const aio = python.import("asyncio");
+  assertEquals(aio.run(test()).valueOf(), "ok");
+});
+
+Deno.test("callback", {
+  sanitizeResources: false,
+}, () => {
+  const { call } = python.runModule(
+    `
+def call(cb):
+  return cb(61, reduce=1) + 1
+  `,
+    "cb_test.py",
+  );
+
+  assertEquals(
+    call((kw: { reduce: number }, num: number) => {
+      return num - kw.reduce + 8;
+    }).valueOf(),
+    69,
+  );
+});
