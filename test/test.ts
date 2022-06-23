@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "./deps.ts";
 import {
+kw,
   NamedArgument,
   ProxiedPyObject,
   PyObject,
@@ -134,7 +135,7 @@ Deno.test("named argument", async (t) => {
     assertEquals(
       python
         .str("Hello, {name}!")
-        .format(new NamedArgument("name", "world"))
+        .format(kw`name=${"world"}`)
         .valueOf(),
       "Hello, world!",
     );

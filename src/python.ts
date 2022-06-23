@@ -91,6 +91,19 @@ export class NamedArgument {
 }
 
 /**
+ * Template Tag to create Keyword Arguments easily
+ * 
+ * Ex:
+ * 
+ * ```ts
+ * some_python_function(kw`name=${value}`);
+ * ```
+ */
+export function kw(strings: TemplateStringsArray, value: PythonConvertible): NamedArgument {
+  return new NamedArgument(strings[0].split("=")[0].trim(), value);
+}
+
+/**
  * Represents a Python object.
  *
  * It can be anything, like an int, a string, a list, a dict, etc. and
