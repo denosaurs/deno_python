@@ -90,20 +90,6 @@ export class NamedArgument {
   }
 }
 
-const getfnptr = Deno.dlopen("./dummy.so", {
-  ptr: {
-    parameters: [
-      {
-        function: {
-          parameters: ["pointer", "pointer", "pointer"],
-          result: "pointer",
-        },
-      },
-    ],
-    result: "pointer",
-  },
-} as any).symbols.ptr as (fn: CallableFunction) => Deno.UnsafePointer;
-
 /**
  * Represents a Python object.
  *
@@ -127,14 +113,14 @@ const getfnptr = Deno.dlopen("./dummy.so", {
  * C PyObject.
  */
 export class PyObject {
-  constructor(public handle: Deno.UnsafePointer) {}
+  constructor(public handle: bigint) {}
 
   /**
    * Check if the object is NULL (pointer) or None type in Python.
    */
   get isNone() {
-    return this.handle.value === 0n ||
-      this.handle.value === python.None[ProxiedPyObject].handle.value;
+    return this.handle === 0n ||
+      this.handle === python.None[ProxiedPyObject].handle;
   }
 
   /**
@@ -228,8 +214,8 @@ export class PyObject {
             const item = py.PyList_GetItem(
               this.handle,
               parseInt(name),
-            ) as Deno.UnsafePointer;
-            if (item.value !== 0n) {
+            );
+            if (item !== 0n) {
               return new PyObject(item).proxy;
             }
           }
@@ -240,8 +226,8 @@ export class PyObject {
           const item = py.PyObject_GetItem(
             this.handle,
             slice.handle,
-          ) as Deno.UnsafePointer;
-          if (item.value !== 0n) {
+          );
+          if (item !== 0n) {
             return new PyObject(item).proxy;
           }
         }
@@ -257,8 +243,8 @@ export class PyObject {
             const value = py.PyDict_GetItemString(
               this.handle,
               cstr(name),
-            ) as Deno.UnsafePointer;
-            if (value.value !== 0n) {
+            );
+            if (value !== 0n) {
               return new PyObject(value).proxy;
             }
           }
@@ -341,22 +327,22 @@ export class PyObject {
     switch (typeof v) {
       case "boolean": {
         return new PyObject(
-          py.PyBool_FromLong(v ? 1 : 0) as Deno.UnsafePointer,
+          py.PyBool_FromLong(v ? 1 : 0),
         );
       }
 
       case "number": {
         if (Number.isInteger(v)) {
-          return new PyObject(py.PyLong_FromLong(v) as Deno.UnsafePointer);
+          return new PyObject(py.PyLong_FromLong(v));
         } else {
-          return new PyObject(py.PyFloat_FromDouble(v) as Deno.UnsafePointer);
+          return new PyObject(py.PyFloat_FromDouble(v));
         }
       }
 
       case "bigint": {
         // TODO
         return new PyObject(
-          py.PyLong_FromLong(Number(v)) as Deno.UnsafePointer,
+          py.PyLong_FromLong(Number(v)),
         );
       }
 
@@ -367,7 +353,7 @@ export class PyObject {
           const proxy = v as PythonProxy;
           return proxy[ProxiedPyObject];
         } else if (Array.isArray(v)) {
-          const list = py.PyList_New(v.length) as Deno.UnsafePointer;
+          const list = py.PyList_New(v.length);
           for (let i = 0; i < v.length; i++) {
             py.PyList_SetItem(list, i, PyObject.from(v[i]).owned.handle);
           }
@@ -375,7 +361,7 @@ export class PyObject {
         } else if (v instanceof PyObject) {
           return v;
         } else if (v instanceof Set) {
-          const set = py.PySet_New(null) as Deno.UnsafePointer;
+          const set = py.PySet_New(null);
           for (const i of v) {
             const item = PyObject.from(i);
             py.PySet_Add(set, item.owned.handle);
@@ -383,7 +369,7 @@ export class PyObject {
           }
           return new PyObject(set);
         } else {
-          const dict = py.PyDict_New() as Deno.UnsafePointer;
+          const dict = py.PyDict_New();
           for (
             const [key, value]
               of (v instanceof Map ? v.entries() : Object.entries(v))
@@ -410,7 +396,7 @@ export class PyObject {
             cstr(str),
             str.length,
             null,
-          ) as Deno.UnsafePointer,
+          ),
         );
       }
 
@@ -422,7 +408,7 @@ export class PyObject {
         if (ProxiedPyObject in v) {
           return (v as any)[ProxiedPyObject];
         } else {
-          const resource = (Deno as any).registerCallback(
+          const resource = new Deno.UnsafeCallback(
             {
               parameters: ["pointer", "pointer", "pointer"],
               result: "pointer",
@@ -434,16 +420,16 @@ export class PyObject {
             ) => {
               return PyObject.from(v(
                 kwargs === 0n ? {} : Object.fromEntries(
-                  new PyObject(new Deno.UnsafePointer(kwargs)).asDict()
+                  new PyObject(kwargs).asDict()
                     .entries(),
                 ),
                 ...(args === 0n
                   ? []
-                  : new PyObject(new Deno.UnsafePointer(args)).valueOf()),
+                  : new PyObject(args).valueOf()),
               )).handle;
             },
           );
-          const ptr = getfnptr(resource);
+          const ptr = Deno.UnsafePointer.of(resource);
           const struct = new Uint8Array(8 + 8 + 4 + 8);
           const view = new DataView(struct.buffer);
           const LE =
@@ -452,10 +438,10 @@ export class PyObject {
             (v.name || "anonymous") + "\0",
           );
           const docBuf = nameBuf;
-          view.setBigUint64(0, Deno.UnsafePointer.of(nameBuf).value, LE);
-          view.setBigUint64(8, ptr.value, LE);
+          view.setBigUint64(0, Deno.UnsafePointer.of(nameBuf), LE);
+          view.setBigUint64(8, ptr, LE);
           view.setInt32(16, 0x1 | 0x2, LE);
-          view.setBigUint64(20, Deno.UnsafePointer.of(docBuf).value, LE);
+          view.setBigUint64(20, Deno.UnsafePointer.of(docBuf), LE);
           const fn = py.PyCFunction_New(struct, PyObject.from(null).handle);
           return new PyObject(fn);
         }
@@ -474,9 +460,9 @@ export class PyObject {
    */
   maybeGetAttr(name: string): PyObject | undefined {
     const obj = new PyObject(
-      py.PyObject_GetAttrString(this.handle, cstr(name)) as Deno.UnsafePointer,
+      py.PyObject_GetAttrString(this.handle, cstr(name)),
     );
-    if (obj.handle.value === 0n) {
+    if (obj.handle === 0n) {
       py.PyErr_Clear();
       return undefined;
     } else {
@@ -541,8 +527,8 @@ export class PyObject {
    * Casts a String Python object as JS String value.
    */
   asString() {
-    const str = py.PyUnicode_AsUTF8(this.handle) as Deno.UnsafePointer;
-    if (str.value === 0n) {
+    const str = py.PyUnicode_AsUTF8(this.handle);
+    if (str === 0n) {
       return null;
     } else {
       return new Deno.UnsafePointerView(str).getCString();
@@ -568,14 +554,14 @@ export class PyObject {
    */
   asDict() {
     const dict = new Map<PythonConvertible, PythonConvertible>();
-    const keys = py.PyDict_Keys(this.handle) as Deno.UnsafePointer;
+    const keys = py.PyDict_Keys(this.handle);
     const length = py.PyList_Size(keys) as number;
     for (let i = 0; i < length; i++) {
       const key = new PyObject(
-        py.PyList_GetItem(keys, i) as Deno.UnsafePointer,
+        py.PyList_GetItem(keys, i),
       );
       const value = new PyObject(
-        py.PyDict_GetItem(this.handle, key.handle) as Deno.UnsafePointer,
+        py.PyDict_GetItem(this.handle, key.handle),
       );
       dict.set(key.valueOf(), value.valueOf());
     }
@@ -583,11 +569,11 @@ export class PyObject {
   }
 
   *[Symbol.iterator]() {
-    const iter = py.PyObject_GetIter(this.handle) as Deno.UnsafePointer;
-    let item = py.PyIter_Next(iter) as Deno.UnsafePointer;
-    while (item.value !== 0n) {
+    const iter = py.PyObject_GetIter(this.handle);
+    let item = py.PyIter_Next(iter);
+    while (item !== 0n) {
       yield new PyObject(item);
-      item = py.PyIter_Next(iter) as Deno.UnsafePointer;
+      item = py.PyIter_Next(iter);
     }
     py.Py_DecRef(iter);
   }
@@ -611,7 +597,7 @@ export class PyObject {
     const length = py.PyTuple_Size(this.handle) as number;
     for (let i = 0; i < length; i++) {
       tuple.push(
-        new PyObject(py.PyTuple_GetItem(this.handle, i) as Deno.UnsafePointer)
+        new PyObject(py.PyTuple_GetItem(this.handle, i))
           .valueOf(),
       );
     }
@@ -625,25 +611,25 @@ export class PyObject {
    * a proxy to Python object.
    */
   valueOf() {
-    const type = (py.PyObject_Type(this.handle) as Deno.UnsafePointer).value;
+    const type = py.PyObject_Type(this.handle);
 
-    if (type === python.None[ProxiedPyObject].handle.value) {
+    if (type === python.None[ProxiedPyObject].handle) {
       return null;
-    } else if (type === python.bool[ProxiedPyObject].handle.value) {
+    } else if (type === python.bool[ProxiedPyObject].handle) {
       return this.asBoolean();
-    } else if (type === python.int[ProxiedPyObject].handle.value) {
+    } else if (type === python.int[ProxiedPyObject].handle) {
       return this.asLong();
-    } else if (type === python.float[ProxiedPyObject].handle.value) {
+    } else if (type === python.float[ProxiedPyObject].handle) {
       return this.asDouble();
-    } else if (type === python.str[ProxiedPyObject].handle.value) {
+    } else if (type === python.str[ProxiedPyObject].handle) {
       return this.asString();
-    } else if (type === python.list[ProxiedPyObject].handle.value) {
+    } else if (type === python.list[ProxiedPyObject].handle) {
       return this.asArray();
-    } else if (type === python.dict[ProxiedPyObject].handle.value) {
+    } else if (type === python.dict[ProxiedPyObject].handle) {
       return this.asDict();
-    } else if (type === python.set[ProxiedPyObject].handle.value) {
+    } else if (type === python.set[ProxiedPyObject].handle) {
       return this.asSet();
-    } else if (type === python.tuple[ProxiedPyObject].handle.value) {
+    } else if (type === python.tuple[ProxiedPyObject].handle) {
       return this.asTuple();
     } else {
       return this.proxy;
@@ -690,7 +676,7 @@ export class PyObject {
       this.handle,
       args,
       kwargs,
-    ) as Deno.UnsafePointer;
+    );
 
     py.Py_DecRef(args);
     py.Py_DecRef(kwargs);
@@ -704,7 +690,7 @@ export class PyObject {
    * Returns `str` representation of the Python object.
    */
   toString() {
-    return new PyObject(py.PyObject_Str(this.handle) as Deno.UnsafePointer)
+    return new PyObject(py.PyObject_Str(this.handle))
       .asString();
   }
 
@@ -726,8 +712,8 @@ export class PythonError extends Error {
  * Checks if there's any error set, throws it if there is.
  */
 export function maybeThrowError() {
-  const error = py.PyErr_Occurred() as Deno.UnsafePointer;
-  if (error.value === 0n) {
+  const error = py.PyErr_Occurred();
+  if (error === 0n) {
     return;
   }
 
@@ -738,9 +724,9 @@ export function maybeThrowError() {
     pointers.subarray(2, 3),
   );
 
-  const type = new PyObject(new Deno.UnsafePointer(pointers[0])),
-    value = new PyObject(new Deno.UnsafePointer(pointers[1])),
-    traceback = new PyObject(new Deno.UnsafePointer(pointers[2]));
+  const type = new PyObject(pointers[0]),
+    value = new PyObject(pointers[1]),
+    traceback = new PyObject(pointers[2]);
 
   let errorMessage = (value ?? type).toString() ?? "Unknown error";
   if (!traceback.isNone) {
@@ -826,8 +812,8 @@ export class Python {
         this.builtins.compile(code, name ?? "__main__", "exec"),
       )
         .handle,
-    ) as Deno.UnsafePointer;
-    if (module.value === 0n) {
+    );
+    if (module === 0n) {
       throw new PythonError("Failed to run module");
     }
     return new PyObject(module)?.proxy;
@@ -837,8 +823,8 @@ export class Python {
    * Import a module as PyObject.
    */
   importObject(name: string) {
-    const mod = py.PyImport_ImportModule(cstr(name)) as Deno.UnsafePointer;
-    if (mod.value === 0n) {
+    const mod = py.PyImport_ImportModule(cstr(name));
+    if (mod === 0n) {
       maybeThrowError();
       throw new PythonError(`Failed to import module ${name}`);
     }
@@ -891,9 +877,10 @@ function toSlice(sliceList: string): PyObject {
     const pyTuple_Pack = new Deno.UnsafeFnPointer(py.PyTuple_Pack, {
       parameters: ["i32", ...pySlicesHandle.map(() => "pointer" as const)],
       result: "pointer",
-    });
+    } as const);
 
-    const pyTupleHandle = pyTuple_Pack.call(
+    // SAFETY: idk how to make TS understand this sort of function
+    const pyTupleHandle = (pyTuple_Pack as any).call(
       pySlicesHandle.length,
       ...pySlicesHandle,
     );
