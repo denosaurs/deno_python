@@ -35,13 +35,15 @@ if (DENO_PYTHON_PATH) {
 
 let py!: Deno.DynamicLibrary<typeof SYMBOLS>["symbols"];
 
+let errors = [];
+
 for (const path of searchPath) {
   try {
     py = Deno.dlopen(path, SYMBOLS).symbols;
     postSetup(path);
     break;
-  } catch (_) {
-    continue;
+  } catch (e) {
+    errors.push(e.message);
   }
 }
 
@@ -61,7 +63,7 @@ you can open an issue: https://github.com/denosaurs/deno_python/issues
 However, if your Python distribution is not in search
 path, you can set DENO_PYTHON_PATH env variable pointing
 to dll/dylib/so file for Python library.
-`);
+`, { cause: new Error(errors.join("\n")) });
 
 if (typeof py !== "object") {
   throw LIBRARY_NOT_FOUND;
