@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "./deps.ts";
 import {
-kw,
+  kw,
   NamedArgument,
   ProxiedPyObject,
   PyObject,

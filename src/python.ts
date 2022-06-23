@@ -92,14 +92,17 @@ export class NamedArgument {
 
 /**
  * Template Tag to create Keyword Arguments easily
- * 
+ *
  * Ex:
- * 
+ *
  * ```ts
  * some_python_function(kw`name=${value}`);
  * ```
  */
-export function kw(strings: TemplateStringsArray, value: PythonConvertible): NamedArgument {
+export function kw(
+  strings: TemplateStringsArray,
+  value: PythonConvertible,
+): NamedArgument {
   return new NamedArgument(strings[0].split("=")[0].trim(), value);
 }
 
@@ -436,9 +439,7 @@ export class PyObject {
                   new PyObject(kwargs).asDict()
                     .entries(),
                 ),
-                ...(args === 0n
-                  ? []
-                  : new PyObject(args).valueOf()),
+                ...(args === 0n ? [] : new PyObject(args).valueOf()),
               )).handle;
             },
           );
@@ -887,10 +888,13 @@ function toSlice(sliceList: string): PyObject {
       .map(toSlice)
       .map((pyObject) => pyObject.handle);
 
-    const pyTuple_Pack = new Deno.UnsafeFnPointer(py.PyTuple_Pack, {
-      parameters: ["i32", ...pySlicesHandle.map(() => "pointer" as const)],
-      result: "pointer",
-    } as const);
+    const pyTuple_Pack = new Deno.UnsafeFnPointer(
+      py.PyTuple_Pack,
+      {
+        parameters: ["i32", ...pySlicesHandle.map(() => "pointer" as const)],
+        result: "pointer",
+      } as const,
+    );
 
     // SAFETY: idk how to make TS understand this sort of function
     const pyTupleHandle = (pyTuple_Pack as any).call(
