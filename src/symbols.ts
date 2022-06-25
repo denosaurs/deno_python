@@ -373,8 +373,8 @@ export const SYMBOLS = {
     type: "pointer",
   },
 
-  PyCFunction_New: {
-    parameters: ["pointer", "pointer"],
+  PyCFunction_NewEx: {
+    parameters: ["pointer", "pointer", "pointer"],
     result: "pointer",
   },
 } as const;

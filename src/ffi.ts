@@ -41,7 +41,6 @@ for (const path of searchPath) {
     postSetup(path);
     break;
   } catch (_) {
-    console.log(_);
     continue;
   }
 }
