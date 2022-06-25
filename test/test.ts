@@ -277,9 +277,7 @@ async def test():
   assertEquals(aio.run(test()).valueOf(), "ok");
 });
 
-Deno.test("callback", {
-  sanitizeResources: false,
-}, () => {
+Deno.test("callback", () => {
   const { call } = python.runModule(
     `
 def call(cb):
@@ -287,11 +285,12 @@ def call(cb):
   `,
     "cb_test.py",
   );
-
+  const cb = python.callback((kw: { reduce: number }, num: number) => {
+    return num - kw.reduce + 8;
+  });
   assertEquals(
-    call((kw: { reduce: number }, num: number) => {
-      return num - kw.reduce + 8;
-    }).valueOf(),
+    call(cb).valueOf(),
     69,
   );
+  cb.destroy();
 });
