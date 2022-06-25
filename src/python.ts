@@ -47,6 +47,9 @@ export interface PythonProxy {
  *
  * - `Set` becomes `set` in Python.
  *
+ * - `function` becomes a Python function. First argument passed is
+ *   an object containing kwargs and rest arguments are positional.
+ *
  * If you pass a PyObject, it is used as-is.
  *
  * If you pass a PythonProxy, its original PyObject will be used.
