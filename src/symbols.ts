@@ -372,4 +372,9 @@ export const SYMBOLS = {
   PyTuple_Pack: {
     type: "pointer",
   },
+
+  PyCFunction_NewEx: {
+    parameters: ["pointer", "pointer", "pointer"],
+    result: "pointer",
+  },
 } as const;

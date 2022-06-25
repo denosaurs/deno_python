@@ -39,11 +39,11 @@ jobs:
         with:
           deno-version: v1.x
 
-      - name: Setup Python 3.9 (Windows)
+      - name: Setup Python 3.10 (Windows)
         uses: actions/setup-python@v2
         if: ${{ matrix.os == 'windows-latest' }}
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Install NumPy
         run: python3 -m pip install numpy
