@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-explicit-any no-fallthrough
+// deno-lint-ignore-file no-explicit-any
 import { py } from "./ffi.ts";
 import { cstr, SliceItemRegExp } from "./util.ts";
 
