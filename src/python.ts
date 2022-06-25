@@ -456,7 +456,11 @@ export class PyObject {
           view.setBigUint64(8, ptr, LE);
           view.setInt32(16, 0x1 | 0x2, LE);
           view.setBigUint64(20, Deno.UnsafePointer.of(docBuf), LE);
-          const fn = py.PyCFunction_NewEx(struct, PyObject.from(null).handle, 0n);
+          const fn = py.PyCFunction_NewEx(
+            struct,
+            PyObject.from(null).handle,
+            0n,
+          );
           return new PyObject(fn);
         }
       }
