@@ -25,8 +25,8 @@ plt.show();
 ```
 
 When running, you **must** specify `--allow-ffi`, `--allow-env` and `--unstable`
-flag. Alternatively, you may also just specify `-A` instead of specific
-permissions since FFI effectively means all permissions.
+flags. Alternatively, you may also just specify `-A` instead of specific
+permissions since enabling FFI effectively escapes the permissions sandbox.
 
 ```shell
 deno run -A --unstable <file>
