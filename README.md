@@ -42,13 +42,18 @@ Check out the docs
 
 This module uses FFI to interface with the Python interpreter's C API. So you
 must have an existing Python installation (with the shared library), which is
-something like `python39.dll`, etc.
+something like `python310.dll`, etc.
 
 Python installed from Microsoft Store does not work, as it does not contain
 shared library for interfacing with Python interpreter.
 
 If the module fails to find Python, you can add the path to the Python in the
 `DENO_PYTHON_PATH` environment variable.
+
+`DENO_PYTHON_PATH` if set, must point to full path including the file name
+of the Python dynamic library, which is like `python310.dll` (Windows),
+`libpython310.dylib` (macOS) and `libpython310.so` (Linux) depending on
+platform.
 
 ## Maintainers
 
