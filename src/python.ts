@@ -135,7 +135,7 @@ export function kw(
  * ```
  */
 export class Callback {
-  unsafe: Deno.UnsafeCallback;
+  unsafe;
 
   constructor(public callback: PythonJSCallback) {
     this.unsafe = new Deno.UnsafeCallback(
