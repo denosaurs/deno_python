@@ -24,10 +24,9 @@ plt.plot(xpoints, ypoints);
 plt.show();
 ```
 
-When running, you **must** specify `--allow-ffi`, `--allow-env` and
-`--unstable` flag. Alternatively, you may also just specify `-A`
-instead of specific permissions since FFI effectively means all
-permissions.
+When running, you **must** specify `--allow-ffi`, `--allow-env` and `--unstable`
+flag. Alternatively, you may also just specify `-A` instead of specific
+permissions since FFI effectively means all permissions.
 
 ```shell
 deno run -A --unstable <file>
@@ -50,8 +49,8 @@ shared library for interfacing with Python interpreter.
 If the module fails to find Python, you can add the path to the Python in the
 `DENO_PYTHON_PATH` environment variable.
 
-`DENO_PYTHON_PATH` if set, must point to full path including the file name
-of the Python dynamic library, which is like `python310.dll` (Windows),
+`DENO_PYTHON_PATH` if set, must point to full path including the file name of
+the Python dynamic library, which is like `python310.dll` (Windows),
 `libpython310.dylib` (macOS) and `libpython310.so` (Linux) depending on
 platform.
 
