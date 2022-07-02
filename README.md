@@ -7,6 +7,10 @@
 
 Python interpreter bindings for Deno.
 
+## Example
+
+Import any locally installed Python package, for example, `matplotlib`:
+
 ```ts
 import { python } from "https://deno.land/x/python@0.2.0/mod.ts";
 
@@ -18,6 +22,15 @@ const ypoints = np.array([3, 10]);
 
 plt.plot(xpoints, ypoints);
 plt.show();
+```
+
+When running, you **must** specify `--allow-ffi`, `--allow-env` and
+`--unstable` flag. Alternatively, you may also just specify `-A`
+instead of specific permissions since FFI effectively means all
+permissions.
+
+```shell
+deno run -A --unstable <file>
 ```
 
 ## Documentation
@@ -41,16 +54,6 @@ If the module fails to find Python, you can add the path to the Python in the
 
 - DjDeveloper ([@DjDeveloperr](https://github.com/DjDeveloperr))
 - Elias Sjögreen ([@eliassjogreen](https://github.com/eliassjogreen))
-
-## Permission Table
-
-| Permission Needed | Reason                                         |
-| ----------------- | ---------------------------------------------- |
-| `--allow-env`     | For finding the location of the python library |
-| `--allow-run`     | For finding the location of the python library |
-| `--allow-read`    | For reading the library                        |
-| `--allow-ffi`     | It uses FFI to interact with python            |
-| `--unstable`      | It's unstable because it uses FFI              |
 
 ## Other
 
