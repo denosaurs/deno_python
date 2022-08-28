@@ -25,7 +25,7 @@ export const SYMBOLS = {
   },
 
   PyImport_ImportModule: {
-    parameters: ["pointer"],
+    parameters: ["buffer"],
     result: "pointer",
   },
 
@@ -35,7 +35,7 @@ export const SYMBOLS = {
   },
 
   PyRun_SimpleString: {
-    parameters: ["pointer"],
+    parameters: ["buffer"],
     result: "i32",
   },
 
@@ -50,7 +50,7 @@ export const SYMBOLS = {
   },
 
   PyErr_Fetch: {
-    parameters: ["pointer", "pointer", "pointer"],
+    parameters: ["buffer", "buffer", "buffer"],
     result: "void",
   },
 
@@ -60,7 +60,7 @@ export const SYMBOLS = {
   },
 
   PyDict_SetItemString: {
-    parameters: ["pointer", "pointer", "pointer"],
+    parameters: ["pointer", "buffer", "pointer"],
     result: "i32",
   },
 
@@ -90,17 +90,17 @@ export const SYMBOLS = {
   },
 
   PyObject_GetAttrString: {
-    parameters: ["pointer", "pointer"],
+    parameters: ["pointer", "buffer"],
     result: "pointer",
   },
 
   PyObject_SetAttrString: {
-    parameters: ["pointer", "pointer", "pointer"],
+    parameters: ["pointer", "buffer", "pointer"],
     result: "i32",
   },
 
   PyObject_HasAttrString: {
-    parameters: ["pointer", "pointer"],
+    parameters: ["pointer", "buffer"],
     result: "i32",
   },
 
@@ -200,7 +200,7 @@ export const SYMBOLS = {
   },
 
   PyUnicode_DecodeUTF8: {
-    parameters: ["pointer", "i32", "pointer"],
+    parameters: ["buffer", "i32", "pointer"],
     result: "pointer",
   },
 
@@ -345,7 +345,7 @@ export const SYMBOLS = {
   },
 
   PyImport_ExecCodeModule: {
-    parameters: ["pointer", "pointer"],
+    parameters: ["buffer", "pointer"],
     result: "pointer",
   },
 
@@ -355,7 +355,7 @@ export const SYMBOLS = {
   },
 
   PyDict_GetItemString: {
-    parameters: ["pointer", "pointer"],
+    parameters: ["pointer", "buffer"],
     result: "pointer",
   },
 
@@ -374,7 +374,7 @@ export const SYMBOLS = {
   },
 
   PyCFunction_NewEx: {
-    parameters: ["pointer", "pointer", "pointer"],
+    parameters: ["buffer", "pointer", "pointer"],
     result: "pointer",
   },
 } as const;

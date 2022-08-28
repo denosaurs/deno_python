@@ -3,7 +3,7 @@ export const decoder = new TextDecoder();
 
 const libDlDef = {
   dlopen: {
-    parameters: ["pointer", "i32"],
+    parameters: ["buffer", "i32"],
     result: "pointer",
   },
 } as const;
@@ -22,7 +22,7 @@ export function postSetup(lib: string) {
       gnu_get_libc_version: { parameters: [], result: "pointer" },
     });
     const ptrView = new Deno.UnsafePointerView(
-      libc.symbols.gnu_get_libc_version(),
+      BigInt(libc.symbols.gnu_get_libc_version()),
     );
     const glibcVersion = parseFloat(ptrView.getCString());
 
@@ -34,7 +34,7 @@ export function postSetup(lib: string) {
   } else if (Deno.build.os === "darwin") {
     libdl = Deno.dlopen(`libc.dylib`, {
       dlopen: {
-        parameters: ["pointer", "i32"],
+        parameters: ["buffer", "i32"],
         result: "pointer",
       },
     });
