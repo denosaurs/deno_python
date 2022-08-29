@@ -297,7 +297,7 @@ def call(cb):
 
 Deno.test("exceptions", async (t) => {
   await t.step("simple exception", () => {
-  assertThrows(() => python.runModule("1 / 0"));
+    assertThrows(() => python.runModule("1 / 0"));
   });
 
   await t.step("exception with traceback", () => {
