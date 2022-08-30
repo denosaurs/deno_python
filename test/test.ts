@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "./deps.ts";
+import { assert, assertEquals, assertThrows } from "./deps.ts";
 import {
   kw,
   NamedArgument,
@@ -293,4 +293,16 @@ def call(cb):
     69,
   );
   cb.destroy();
+});
+
+Deno.test("exceptions", async (t) => {
+  await t.step("simple exception", () => {
+    assertThrows(() => python.runModule("1 / 0"));
+  });
+
+  await t.step("exception with traceback", () => {
+    const np = python.import("numpy");
+    const array = np.zeros([2, 3, 4]);
+    assertThrows(() => array.shape = [3, 6]);
+  });
 });

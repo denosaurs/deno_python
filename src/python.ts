@@ -194,6 +194,7 @@ export class PyObject {
    */
   get isNone() {
     return this.handle === 0 ||
+      this.handle === 0n ||
       this.handle === python.None[ProxiedPyObject].handle;
   }
 
