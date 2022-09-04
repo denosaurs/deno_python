@@ -80,6 +80,7 @@ export const SYMBOLS = {
   },
 
   PyObject_Call: {
+    callback: true,
     parameters: ["pointer", "pointer", "pointer"],
     result: "pointer",
   },
