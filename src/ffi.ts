@@ -40,7 +40,12 @@ for (const path of searchPath) {
     py = Deno.dlopen(path, SYMBOLS).symbols;
     postSetup(path);
     break;
-  } catch (_) {
+  } catch (err) {
+    if (err instanceof TypeError) {
+      throw new Error(
+        "Cannot load dynamic library because --unstable flag was not set",
+      );
+    }
     continue;
   }
 }
