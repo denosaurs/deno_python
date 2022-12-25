@@ -3,7 +3,7 @@ import { postSetup } from "./util.ts";
 
 const searchPath: string[] = [];
 
-const SUPPORTED_VERSIONS = [[3, 10], [3, 9], [3, 8]];
+const SUPPORTED_VERSIONS = [[3, 11], [3, 10], [3, 9], [3, 8]];
 const DENO_PYTHON_PATH = Deno.env.get("DENO_PYTHON_PATH");
 
 if (DENO_PYTHON_PATH) {
@@ -40,7 +40,12 @@ for (const path of searchPath) {
     py = Deno.dlopen(path, SYMBOLS).symbols;
     postSetup(path);
     break;
-  } catch (_) {
+  } catch (err) {
+    if (err instanceof TypeError) {
+      throw new Error(
+        "Cannot load dynamic library because --unstable flag was not set",
+      );
+    }
     continue;
   }
 }
