@@ -1,2 +1,3 @@
 .vscode/
 /*.bat
+deno.lock
