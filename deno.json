@@ -1,5 +1,9 @@
 {
   "tasks": {
-    "test": "deno test --unstable -A test/test.ts"
+    "test": "deno test --unstable -A test/test.ts",
+    "example_hello_python": "deno run -A --unstable examples/hello_python.ts",
+    "example_matplotlib": "deno run -A --unstable examples/matplotlib.ts",
+    "example_run_code": "deno run -A --unstable examples/run_code.ts",
+    "example_tensorflow": "deno run -A --unstable examples/tensorflow.ts"
   }
 }
