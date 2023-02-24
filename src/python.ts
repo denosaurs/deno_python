@@ -676,23 +676,39 @@ export class PyObject {
   valueOf() {
     const type = py.PyObject_Type(this.handle);
 
-    if (type === python.None[ProxiedPyObject].handle) {
+    if (Deno.UnsafePointer.equals(type, python.None[ProxiedPyObject].handle)) {
       return null;
-    } else if (type === python.bool[ProxiedPyObject].handle) {
+    } else if (
+      Deno.UnsafePointer.equals(type, python.bool[ProxiedPyObject].handle)
+    ) {
       return this.asBoolean();
-    } else if (type === python.int[ProxiedPyObject].handle) {
+    } else if (
+      Deno.UnsafePointer.equals(type, python.int[ProxiedPyObject].handle)
+    ) {
       return this.asLong();
-    } else if (type === python.float[ProxiedPyObject].handle) {
+    } else if (
+      Deno.UnsafePointer.equals(type, python.float[ProxiedPyObject].handle)
+    ) {
       return this.asDouble();
-    } else if (type === python.str[ProxiedPyObject].handle) {
+    } else if (
+      Deno.UnsafePointer.equals(type, python.str[ProxiedPyObject].handle)
+    ) {
       return this.asString();
-    } else if (type === python.list[ProxiedPyObject].handle) {
+    } else if (
+      Deno.UnsafePointer.equals(type, python.list[ProxiedPyObject].handle)
+    ) {
       return this.asArray();
-    } else if (type === python.dict[ProxiedPyObject].handle) {
+    } else if (
+      Deno.UnsafePointer.equals(type, python.dict[ProxiedPyObject].handle)
+    ) {
       return this.asDict();
-    } else if (type === python.set[ProxiedPyObject].handle) {
+    } else if (
+      Deno.UnsafePointer.equals(type, python.set[ProxiedPyObject].handle)
+    ) {
       return this.asSet();
-    } else if (type === python.tuple[ProxiedPyObject].handle) {
+    } else if (
+      Deno.UnsafePointer.equals(type, python.tuple[ProxiedPyObject].handle)
+    ) {
       return this.asTuple();
     } else {
       return this.proxy;
