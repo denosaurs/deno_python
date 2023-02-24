@@ -22,7 +22,7 @@ export function postSetup(lib: string) {
       gnu_get_libc_version: { parameters: [], result: "pointer" },
     });
     const ptrView = new Deno.UnsafePointerView(
-      BigInt(libc.symbols.gnu_get_libc_version()),
+      libc.symbols.gnu_get_libc_version()!,
     );
     const glibcVersion = parseFloat(ptrView.getCString());
 

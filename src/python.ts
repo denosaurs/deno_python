@@ -149,11 +149,11 @@ export class Callback {
         kwargs: Deno.PointerValue,
       ) => {
         return PyObject.from(callback(
-          kwargs === 0 ? {} : Object.fromEntries(
+          kwargs === null ? {} : Object.fromEntries(
             new PyObject(kwargs).asDict()
               .entries(),
           ),
-          ...(args === 0 ? [] : new PyObject(args).valueOf()),
+          ...(args === null ? [] : new PyObject(args).valueOf()),
         )).handle;
       },
     );
@@ -193,8 +193,7 @@ export class PyObject {
    * Check if the object is NULL (pointer) or None type in Python.
    */
   get isNone() {
-    return this.handle === 0 ||
-      this.handle === 0n ||
+    return this.handle === null ||
       this.handle === python.None[ProxiedPyObject].handle;
   }
 
@@ -290,7 +289,7 @@ export class PyObject {
               this.handle,
               parseInt(name),
             );
-            if (item !== 0) {
+            if (item !== null) {
               return new PyObject(item).proxy;
             }
           }
@@ -302,7 +301,7 @@ export class PyObject {
             this.handle,
             slice.handle,
           );
-          if (item !== 0) {
+          if (item !== null) {
             return new PyObject(item).proxy;
           }
         }
@@ -319,7 +318,7 @@ export class PyObject {
               this.handle,
               cstr(name),
             );
-            if (value !== 0) {
+            if (value !== null) {
               return new PyObject(value).proxy;
             }
           }
@@ -443,20 +442,24 @@ export class PyObject {
           );
           view.setBigUint64(
             0,
-            BigInt(Deno.UnsafePointer.of(nameBuf)),
+            BigInt(Deno.UnsafePointer.value(Deno.UnsafePointer.of(nameBuf)!)),
             LE,
           );
-          view.setBigUint64(8, BigInt(v.unsafe.pointer), LE);
+          view.setBigUint64(
+            8,
+            BigInt(Deno.UnsafePointer.value(v.unsafe.pointer)),
+            LE,
+          );
           view.setInt32(16, 0x1 | 0x2, LE);
           view.setBigUint64(
             20,
-            BigInt(Deno.UnsafePointer.of(nameBuf)),
+            BigInt(Deno.UnsafePointer.value(Deno.UnsafePointer.of(nameBuf)!)),
             LE,
           );
           const fn = py.PyCFunction_NewEx(
             struct,
             PyObject.from(null).handle,
-            0n,
+            null,
           );
           return new PyObject(fn);
         } else if (v instanceof PyObject) {
@@ -526,7 +529,7 @@ export class PyObject {
     const obj = new PyObject(
       py.PyObject_GetAttrString(this.handle, cstr(name)),
     );
-    if (obj.handle === 0) {
+    if (obj.handle === null) {
       py.PyErr_Clear();
       return undefined;
     } else {
@@ -592,11 +595,7 @@ export class PyObject {
    */
   asString() {
     const str = py.PyUnicode_AsUTF8(this.handle);
-    if (str === 0) {
-      return null;
-    } else {
-      return Deno.UnsafePointerView.getCString(str as bigint);
-    }
+    return str !== null ? Deno.UnsafePointerView.getCString(str) : null;
   }
 
   /**
@@ -635,7 +634,7 @@ export class PyObject {
   *[Symbol.iterator]() {
     const iter = py.PyObject_GetIter(this.handle);
     let item = py.PyIter_Next(iter);
-    while (item !== 0) {
+    while (item !== null) {
       yield new PyObject(item);
       item = py.PyIter_Next(iter);
     }
@@ -777,7 +776,7 @@ export class PythonError extends Error {
  */
 export function maybeThrowError() {
   const error = py.PyErr_Occurred();
-  if (error === 0) {
+  if (error === null) {
     return;
   }
 
@@ -788,9 +787,9 @@ export function maybeThrowError() {
     pointers.subarray(2, 3),
   );
 
-  const type = new PyObject(pointers[0]),
-    value = new PyObject(pointers[1]),
-    traceback = new PyObject(pointers[2]);
+  const type = new PyObject(Deno.UnsafePointer.create(pointers[0])),
+    value = new PyObject(Deno.UnsafePointer.create(pointers[1])),
+    traceback = new PyObject(Deno.UnsafePointer.create(pointers[2]));
 
   let errorMessage = (value ?? type).toString() ?? "Unknown error";
   if (!traceback.isNone) {
@@ -880,7 +879,7 @@ export class Python {
       )
         .handle,
     );
-    if (module === 0) {
+    if (module === null) {
       throw new PythonError("Failed to run module");
     }
     return new PyObject(module)?.proxy;
@@ -891,7 +890,7 @@ export class Python {
    */
   importObject(name: string) {
     const mod = py.PyImport_ImportModule(cstr(name));
-    if (mod === 0) {
+    if (mod === null) {
       maybeThrowError();
       throw new PythonError(`Failed to import module ${name}`);
     }
@@ -949,7 +948,7 @@ function toSlice(sliceList: string): PyObject {
     const pyTuple_Pack = new Deno.UnsafeFnPointer(
       // TODO: this isn't really a `bigint`, but Deno's type definitions
       // haven't been updated to support `number` yet
-      py.PyTuple_Pack as bigint,
+      py.PyTuple_Pack!,
       {
         parameters: ["i32", ...pySlicesHandle.map(() => "pointer" as const)],
         result: "pointer",

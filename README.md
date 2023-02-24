@@ -70,4 +70,4 @@ Pull request, issues and feedback are very welcome. Code style is formatted with
 
 Copyright 2021, DjDeveloperr.
 
-Copyright 2022, the Denosaurs team. All rights reserved. MIT license.
+Copyright 2023, the Denosaurs team. All rights reserved. MIT license.
