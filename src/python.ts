@@ -957,26 +957,8 @@ function isSlice(value: unknown): boolean {
  */
 function toSlice(sliceList: string): PyObject {
   if (sliceList.includes(",")) {
-    const pySlicesHandle = sliceList.split(",")
-      .map(toSlice)
-      .map((pyObject) => pyObject.handle);
-
-    const pyTuple_Pack = new Deno.UnsafeFnPointer(
-      // TODO: this isn't really a `bigint`, but Deno's type definitions
-      // haven't been updated to support `number` yet
-      py.PyTuple_Pack!,
-      {
-        parameters: ["i32", ...pySlicesHandle.map(() => "pointer" as const)],
-        result: "pointer",
-      } as const,
-    );
-
-    // SAFETY: idk how to make TS understand this sort of function
-    const pyTupleHandle = (pyTuple_Pack as any).call(
-      pySlicesHandle.length,
-      ...pySlicesHandle,
-    );
-    return new PyObject(pyTupleHandle);
+    const pySlicesHandle = sliceList.split(",").map(toSlice);
+    return python.tuple(pySlicesHandle)[ProxiedPyObject];
   } else if (/^\s*-?\d+\s*$/.test(sliceList)) {
     return PyObject.from(parseInt(sliceList));
   } else if (/^\s*\.\.\.\s*$/.test(sliceList)) {
