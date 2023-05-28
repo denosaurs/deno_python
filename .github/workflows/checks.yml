@@ -39,7 +39,7 @@ jobs:
         with:
           deno-version: v1.x
 
-      - name: Setup Python 3.10 (Windows)
+      - name: Setup Python (Windows)
         uses: actions/setup-python@v2
         if: ${{ matrix.os == 'windows-latest' }}
         with:
