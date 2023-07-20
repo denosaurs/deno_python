@@ -35,6 +35,9 @@ Deno.test("types", async (t) => {
   await t.step("str", () => {
     const value = python.str("hello");
     assertEquals(value.valueOf(), "hello");
+
+    const unicode = python.str("'中文'");
+    assertEquals(unicode.valueof(), "'中文'");
   });
 
   await t.step("list", () => {
