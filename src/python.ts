@@ -495,10 +495,12 @@ export class PyObject {
       case "symbol":
       case "string": {
         const str = String(v);
+        const encoder = new TextEncoder();
+        const u8 = encoder.encode(str);
         return new PyObject(
           py.PyUnicode_DecodeUTF8(
-            cstr(str),
-            str.length,
+            u8,
+            u8.byteLength,
             null,
           ),
         );
