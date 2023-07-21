@@ -3,6 +3,8 @@
 import { py } from "./ffi.ts";
 import { cstr, SliceItemRegExp } from "./util.ts";
 
+const refregistry = new FinalizationRegistry(py.Py_DecRef);
+
 /**
  * Symbol used on proxied Python objects to point to the original PyObject object.
  * Can be used to implement PythonProxy and create your own proxies.
@@ -202,6 +204,7 @@ export class PyObject {
    */
   get owned(): PyObject {
     py.Py_IncRef(this.handle);
+    refregistry.register(this, this.handle);
     return this;
   }
 
