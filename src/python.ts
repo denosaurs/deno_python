@@ -734,7 +734,9 @@ export class PyObject {
 
     const positionalCount = positional.length - namedCount;
     if (positionalCount < 0) {
-      throw new PythonError("Not enough arguments");
+      throw new TypeError(
+        `${this.toString()} requires at least ${namedCount} arguments, but only ${positional.length} were passed`,
+      );
     }
 
     const args = py.PyTuple_New(positionalCount);
@@ -787,8 +789,21 @@ export class PyObject {
 export class PythonError extends Error {
   name = "PythonError";
 
-  constructor(public message: string) {
+  constructor(
+    public type: PyObject,
+    public value: PyObject,
+    public traceback: PyObject,
+  ) {
+    let message = (value ?? type).toString() ?? "Unknown error";
+    let stack: string | undefined;
+    if (!traceback.isNone) {
+      const tb = python.import("traceback");
+      stack = (tb.format_tb(traceback).valueOf() as string[]).join("");
+      message += stack;
+    }
+
     super(message);
+    this.stack = stack;
   }
 }
 
@@ -812,13 +827,7 @@ export function maybeThrowError() {
     value = new PyObject(Deno.UnsafePointer.create(pointers[1])),
     traceback = new PyObject(Deno.UnsafePointer.create(pointers[2]));
 
-  let errorMessage = (value ?? type).toString() ?? "Unknown error";
-  if (!traceback.isNone) {
-    const tb = python.import("traceback");
-    errorMessage += `\nTraceback:\n${tb.format_tb(traceback)}`;
-  }
-
-  throw new PythonError(errorMessage);
+  throw new PythonError(type, value, traceback);
 }
 
 /**
@@ -884,7 +893,7 @@ export class Python {
    */
   run(code: string) {
     if (py.PyRun_SimpleString(cstr(code)) !== 0) {
-      throw new PythonError("Failed to run code");
+      throw new EvalError("Failed to run python code");
     }
   }
 
@@ -901,7 +910,7 @@ export class Python {
         .handle,
     );
     if (module === null) {
-      throw new PythonError("Failed to run module");
+      throw new EvalError("Failed to run python module");
     }
     return new PyObject(module)?.proxy;
   }
@@ -913,7 +922,7 @@ export class Python {
     const mod = py.PyImport_ImportModule(cstr(name));
     if (mod === null) {
       maybeThrowError();
-      throw new PythonError(`Failed to import module ${name}`);
+      throw new TypeError(`Failed to import module ${name}`);
     }
     return new PyObject(mod);
   }
