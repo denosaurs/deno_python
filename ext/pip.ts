@@ -1,81 +1,113 @@
 import { kw, python, PythonError } from "../mod.ts";
 
-import { join } from "https://deno.land/std@0.195.0/path/mod.ts";
+import { join } from "https://deno.land/std@0.197.0/path/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.197.0/fs/mod.ts";
+import { green, yellow } from "https://deno.land/std@0.197.0/fmt/colors.ts";
 
 import type { CacheLocation } from "https://deno.land/x/plug@1.0.2/types.ts";
 import { ensureCacheLocation } from "https://deno.land/x/plug@1.0.2/download.ts";
 import { hash } from "https://deno.land/x/plug@1.0.2/util.ts";
-import { green } from "https://deno.land/std@0.195.0/fmt/colors.ts";
 
 const sys = python.import("sys");
 const runpy = python.import("runpy");
-const importlib = python.import("importlib.metadata");
+const importlib = python.import("importlib");
 
-const MODULE_NAME_REGEX =
-  /^([a-z0-9]|[a-z0-9][a-z0-9._-]*[a-z0-9])(?:[^a-z0-9]+.*)$/i;
+// https://packaging.python.org/en/latest/specifications/name-normalization/
+const MODULE_REGEX =
+  /^([a-z0-9]|[a-z0-9][a-z0-9._-]*[a-z0-9])([^a-z0-9._-].*)?$/i;
 
-function normalizeModule(name: string) {
+function normalizeModuleName(name: string) {
   return name.replaceAll(/[-_.]+/g, "-").toLowerCase();
 }
 
-/**
- * Install a Python module using the `pip` package manager into a specified or
- * default cache location, adding that location to the python path if it is not
- * already registered.
- *
- * @param module The Python module which you wish to install
- * @param location The cache location where you want to install it
- *
- * @example
- * ```ts
- * import { python } from "https://deno.land/x/python/mod.ts";
- * import { install } from "https://deno.land/x/python/ext/pip.ts";
- *
- * await install("fuckit");
- * const fuckit = python.import("fuckit");
- *
- * ```
- */
-export async function install(module: string, location?: CacheLocation) {
-  const cacheLocation = join(
-    await ensureCacheLocation(location),
-    globalThis.location !== undefined
-      ? await hash(globalThis.location.href)
-      : "python",
-  );
+function getModuleNameAndVersion(module: string): {
+  name: string;
+  version?: string;
+} {
+  const match = module.match(MODULE_REGEX);
+  const name = match?.[1];
+  const version = match?.[2];
 
-  if (!(cacheLocation in sys.path)) {
-    sys.path.insert(0, cacheLocation);
+  if (name == null) {
+    throw new TypeError("Could not match any valid pip module name");
   }
 
-  const argv = sys.argv;
-  sys.argv = ["pip", "install", "-q", "-t", cacheLocation, module];
-  console.log(`${green("Installing")} ${module}`);
-
-  try {
-    runpy.run_module("pip", kw`run_name=${"__main__"}`);
-  } catch (error) {
-    if (
-      !(error instanceof PythonError &&
-        error.type.isInstance(python.builtins.SystemExit()) &&
-        error.value.asLong() === 0)
-    ) {
-      throw error;
-    }
-  } finally {
-    sys.argv = argv;
-  }
+  return {
+    name: normalizeModuleName(name),
+    version,
+  };
 }
 
-export const pip = {
-  install,
+export class Pip {
+  #cacheLocation: Promise<string>;
+
+  constructor(location: CacheLocation = "./") {
+    this.#cacheLocation = Promise.all([
+      ensureCacheLocation(location),
+      globalThis.location !== undefined
+        ? hash(globalThis.location.href)
+        : Promise.resolve("pip"),
+    ]).then(async (parts) => {
+      const cacheLocation = join(...parts);
+      await ensureDir(cacheLocation);
+
+      if (!(cacheLocation in sys.path)) {
+        sys.path.insert(0, cacheLocation);
+      }
+
+      return cacheLocation;
+    });
+  }
+
   /**
-   * Install and import a Python module using the `pip` package manager into a
-   * specified or default cache location, adding that location to the python
-   * path if it is not already registered.
+   * Install a Python module using the `pip` package manager.
    *
    * @param module The Python module which you wish to install
-   * @param location The cache location where you want to install it
+   *
+   * @example
+   * ```ts
+   * import { python } from "https://deno.land/x/python/mod.ts";
+   * import { install } from "https://deno.land/x/python/ext/pip.ts";
+   *
+   * await install("fuckit");
+   * const fuckit = python.import("fuckit");
+   *
+   * ```
+   */
+  async install(module: string) {
+    const argv = sys.argv;
+    sys.argv = [
+      "pip",
+      "install",
+      "-q",
+      "-t",
+      await this.#cacheLocation,
+      module,
+    ];
+
+    console.log(`${green("Installing")} ${module}`);
+
+    try {
+      runpy.run_module("pip", kw`run_name=${"__main__"}`);
+    } catch (error) {
+      if (
+        !(
+          error instanceof PythonError &&
+          error.type.isInstance(python.builtins.SystemExit()) &&
+          error.value.asLong() === 0
+        )
+      ) {
+        throw error;
+      }
+    } finally {
+      sys.argv = argv;
+    }
+  }
+
+  /**
+   * Install and import a Python module using the `pip` package manager.
+   *
+   * @param module The Python module which you wish to install
    *
    * @example
    * ```ts
@@ -86,21 +118,53 @@ export const pip = {
    *
    * ```
    */
-  import: async (module: string, location?: CacheLocation) => {
-    await install(module, location);
-    const name = normalizeModule(
-      module.match(MODULE_NAME_REGEX)?.[1] ?? module,
-    );
-    const packages = importlib.packages_distributions();
+  async import(module: string, entrypoint?: string) {
+    const { name } = getModuleNameAndVersion(module);
+
+    await this.install(module);
+
+    if (entrypoint) {
+      return python.import(entrypoint);
+    }
+
+    const packages = importlib.metadata.packages_distributions();
+    const entrypoints = [];
+
     for (const entry of packages) {
       if (packages[entry].valueOf().includes(name)) {
-        return python.import(entry);
+        entrypoints.push(entry.valueOf());
       }
     }
-    throw new TypeError(
-      `Failed to import module ${module}, could not find import name`,
-    );
-  },
-};
 
+    if (entrypoints.length === 0) {
+      throw new TypeError(
+        `Failed to import module ${module}, could not find import name ${name}`,
+      );
+    }
+
+    entrypoint = entrypoints[0];
+
+    if (entrypoints.length > 1) {
+      if (entrypoints.includes(name)) {
+        entrypoint = entrypoints[entrypoints.indexOf(name)];
+      } else {
+        console.warn(
+          `${
+            yellow(
+              "Warning",
+            )
+          } could not determine a single entrypoint for module ${module}, please specify one of: ${
+            entrypoints.join(
+              ", ",
+            )
+          }. Importing ${entrypoint}`,
+        );
+      }
+    }
+
+    return python.import(entrypoint!);
+  }
+}
+
+export const pip = new Pip();
 export default pip;
