@@ -5,7 +5,15 @@
 [![checks](https://github.com/denosaurs/deno_python/actions/workflows/checks.yml/badge.svg)](https://github.com/denosaurs/deno_python/actions/workflows/checks.yml)
 [![License](https://img.shields.io/github/license/denosaurs/deno_python)](https://github.com/denosaurs/deno_python/blob/master/LICENSE)
 
-Python interpreter bindings for Deno.
+This module provides a seamless integration between deno and python by
+integrating with the [Python/C API](https://docs.python.org/3/c-api/index.html).
+It acts as a bridge between the two languages, enabling you to pass data and
+execute python code from within your deno applications. This enables access to
+the large and wonderful [python ecosystem](https://pypi.org/) while remaining
+native (unlike a runtime like the wondeful
+[pyodide](https://github.com/pyodide/pyodide) which is compiled to wasm,
+sandboxed and may not work with all python packages) and simply using the
+existing python installation.
 
 ## Example
 
