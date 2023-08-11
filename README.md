@@ -32,6 +32,43 @@ permissions since enabling FFI effectively escapes the permissions sandbox.
 deno run -A --unstable <file>
 ```
 
+### Dependencies
+
+Normally deno_python follows the default python way of resolving imports, going
+through `sys.path` resolving them globally, locally or scoped to a virtual
+environment. This is ~~great~~ and allows you to manage your python dependencies
+for `deno_python` projects in the same way you would any other python project
+using your favorite package manager, be it
+[`pip`](https://pip.pypa.io/en/stable/),
+[`conda`](https://docs.conda.io/en/latest/) or
+[`poetry`](https://python-poetry.org/).
+
+This may not be a good thing though, especially for something like a deno module
+which may depend on a python package. That is why the [`ext/pip`](./ext/pip.ts)
+utility exists for this project. It allows you to install python dependencies
+using pip, scoped to either the global deno installation or if defined the
+`--location` passed to deno without leaking to the global python scope. It uses
+the same caching location and algorithm as
+[plug](https://github.com/denosaurs/deno) and
+[deno cache](https://github.com/denoland/deno_cache).
+
+To use [`ext/pip`](./ext/pip.ts) for python package management you simply use
+the provided `import` or `install` methods. The rest is handled automatically
+for you! Just take a look!
+
+```ts
+import { pip } from "https://deno.land/x/python/ext/pip.ts";
+
+const np = await pip.import("numpy");
+const plt = await pip.import("matplotlib", "matplotlib.pyplot");
+
+const xpoints = np.array([1, 8]);
+const ypoints = np.array([3, 10]);
+
+plt.plot(xpoints, ypoints);
+plt.show();
+```
+
 ## Documentation
 
 Check out the docs
