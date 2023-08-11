@@ -1,8 +1,8 @@
 import { kw, python, PythonError } from "../mod.ts";
 
-import { join } from "https://deno.land/std@0.197.0/path/mod.ts";
-import { ensureDir } from "https://deno.land/std@0.197.0/fs/mod.ts";
-import { green, yellow } from "https://deno.land/std@0.197.0/fmt/colors.ts";
+import { join } from "https://deno.land/std@0.198.0/path/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.198.0/fs/mod.ts";
+import { green, yellow } from "https://deno.land/std@0.198.0/fmt/colors.ts";
 
 import type { CacheLocation } from "https://deno.land/x/plug@1.0.2/types.ts";
 import { ensureCacheLocation } from "https://deno.land/x/plug@1.0.2/download.ts";
@@ -69,8 +69,8 @@ export class Pip {
    * import { python } from "https://deno.land/x/python/mod.ts";
    * import { install } from "https://deno.land/x/python/ext/pip.ts";
    *
-   * await install("fuckit");
-   * const fuckit = python.import("fuckit");
+   * await install("numpy");
+   * const numpy = python.import("numpy");
    *
    * ```
    */
@@ -114,7 +114,7 @@ export class Pip {
    * import { python } from "https://deno.land/x/python/mod.ts";
    * import { pip } from "https://deno.land/x/python/ext/pip.ts";
    *
-   * const fuckit = await pip.import("fuckit==4.8.1");
+   * const numpy = await pip.import("numpy==1.25.2");
    *
    * ```
    */
