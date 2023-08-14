@@ -35,8 +35,8 @@ jobs:
         with:
           deno-version: v1.x
 
-      - name: Run deno fmt
-        run: deno task:check
+      - name: Run deno task check
+        run: deno task check
 
 
   test:
