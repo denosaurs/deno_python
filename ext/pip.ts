@@ -41,7 +41,7 @@ function getModuleNameAndVersion(module: string): {
 export class Pip {
   #cacheLocation: Promise<string>;
 
-  constructor(location: CacheLocation) {
+  constructor(location?: CacheLocation) {
     this.#cacheLocation = Promise.all([
       ensureCacheLocation(location),
       globalThis.location !== undefined

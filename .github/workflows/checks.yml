@@ -24,6 +24,21 @@ jobs:
       - name: Run deno lint
         run: deno lint --unstable
 
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Setup latest deno version
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Run deno task check
+        run: deno task check
+
+
   test:
     name: test ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -49,4 +64,4 @@ jobs:
         run: python3 -m pip install numpy
 
       - name: Run deno test
-        run: deno test --allow-all --unstable
+        run: deno task test
