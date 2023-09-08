@@ -10,7 +10,7 @@ integrating with the [Python/C API](https://docs.python.org/3/c-api/index.html).
 It acts as a bridge between the two languages, enabling you to pass data and
 execute python code from within your deno applications. This enables access to
 the large and wonderful [python ecosystem](https://pypi.org/) while remaining
-native (unlike a runtime like the wondeful
+native (unlike a runtime like the wonderful
 [pyodide](https://github.com/pyodide/pyodide) which is compiled to wasm,
 sandboxed and may not work with all python packages) and simply using the
 existing python installation.
