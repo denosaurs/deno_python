@@ -195,7 +195,9 @@ export class PyObject {
    * Check if the object is NULL (pointer) or None type in Python.
    */
   get isNone() {
-    return this.handle === null ||
+    // deno-lint-ignore ban-ts-comment
+    // @ts-expect-error
+    return this.handle === null || this.handle === 0 ||
       this.handle === python.None[ProxiedPyObject].handle;
   }
 
@@ -260,6 +262,14 @@ export class PyObject {
       value: () => this.toString(),
     });
 
+    Object.defineProperty(object, Symbol.for("nodejs.util.inspect.custom"), {
+      value: () => this.toString(),
+    });
+
+    Object.defineProperty(object, Symbol.toStringTag, {
+      value: () => this.toString(),
+    });
+
     Object.defineProperty(object, Symbol.iterator, {
       value: () => this[Symbol.iterator](),
     });
@@ -282,7 +292,7 @@ export class PyObject {
     return new Proxy(object, {
       get: (_, name) => {
         // For the symbols.
-        if (typeof name === "symbol" && name in object) {
+        if ((typeof name === "symbol") && name in object) {
           return (object as any)[name];
         }
 
@@ -781,6 +791,10 @@ export class PyObject {
   }
 
   [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
+  }
+
+  [Symbol.for("nodejs.util.inspect.custom")]() {
     return this.toString();
   }
 }

@@ -2,3 +2,5 @@
 /*.bat
 deno.lock
 plug/
+bun.lockb
+node_modules/
