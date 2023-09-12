@@ -192,8 +192,7 @@ Deno.test("slice", async (t) => {
     assertEquals(list[":2"].valueOf(), [1, 2]);
     assertEquals(list[":2:"].valueOf(), [1, 2]);
     assertEquals(list["0:3:2"].valueOf(), [1, 3]);
-    console.log(list, list["1:"], list["-2:"]);
-    // assertEquals(list["-2:"].valueOf(), [8, 9]);
+    assertEquals(list["-2:"].valueOf(), [8, 9]);
     assertEquals(list["::2"].valueOf(), [1, 3, 5, 7, 9]);
   });
 

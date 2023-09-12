@@ -41,8 +41,7 @@ for (const path of searchPath) {
     postSetup(path);
     break;
   } catch (err) {
-    console.log(err);
-    if (err instanceof TypeError) {
+    if (err instanceof TypeError && !("Bun" in globalThis)) {
       throw new Error(
         "Cannot load dynamic library because --unstable flag was not set",
         { cause: err },
