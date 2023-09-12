@@ -32,15 +32,11 @@ export function postSetup(lib: string) {
       libDlDef,
     );
   } else if (Deno.build.os === "darwin") {
-    libdl = Deno.dlopen(`libc.dylib`, {
-      dlopen: {
-        parameters: ["buffer", "i32"],
-        result: "pointer",
-      },
-    });
+    libdl = Deno.dlopen(`libc.dylib`, libDlDef);
   } else {
     return;
   }
+  console.log("postSetup libdl");
   libdl.symbols.dlopen(cstr(lib), 0x00001 | 0x00100);
 }
 

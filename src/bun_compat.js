@@ -70,6 +70,14 @@ if (!("Deno" in globalThis) && "Bun" in globalThis) {
       static getCString(ptr) {
         return new CString(ptr);
       }
+
+      constructor(ptr) {
+        this.ptr = ptr;
+      }
+
+      getCString() {
+        return new CString(this.ptr);
+      }
     };
 
     static UnsafePointer = class UnsafePointer {
