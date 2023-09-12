@@ -55,6 +55,7 @@ jobs:
           deno-version: v1.x
 
       - name: Setup Bun
+        if: ${{ matrix.os != 'windows-latest' }}
         uses: oven-sh/setup-bun@v1
 
       - name: Setup Python (Windows)
@@ -70,4 +71,5 @@ jobs:
         run: deno task test
 
       - name: Run bun test
+        if: ${{ matrix.os != 'windows-latest' }}
         run: bun test
