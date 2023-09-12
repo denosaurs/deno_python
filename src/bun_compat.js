@@ -1,4 +1,4 @@
-import {type} from "node:os";
+import { type } from "node:os";
 
 if (!("Deno" in globalThis) && "Bun" in globalThis) {
   const { dlopen, FFIType, CString, JSCallback, ptr } = await import("bun:ffi");
