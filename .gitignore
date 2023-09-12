@@ -4,3 +4,4 @@ deno.lock
 plug/
 bun.lockb
 node_modules/
+__pycache__/
