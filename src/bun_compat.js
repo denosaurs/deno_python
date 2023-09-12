@@ -1,5 +1,7 @@
+import { type } from "node:os";
+
 if (!("Deno" in globalThis) && "Bun" in globalThis) {
-  const { dlopen, FFIType, CString, JSCallback, ptr } = await import("bun:ffi");
+  const { dlopen, FFIType, CString, JSCallback, ptr } = Bun.FFI;
   class Deno {
     static env = {
       get(name) {
@@ -8,7 +10,7 @@ if (!("Deno" in globalThis) && "Bun" in globalThis) {
     };
 
     static build = {
-      os: "darwin",
+      os: type().toLowerCase(),
     };
 
     static transformFFIType(type) {
