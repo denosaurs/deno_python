@@ -36,7 +36,6 @@ export function postSetup(lib: string) {
   } else {
     return;
   }
-  console.log("postSetup libdl");
   libdl.symbols.dlopen(cstr(lib), 0x00001 | 0x00100);
 }
 

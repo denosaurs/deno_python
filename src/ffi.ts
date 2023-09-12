@@ -20,6 +20,7 @@ if (DENO_PYTHON_PATH) {
   } else if (Deno.build.os === "darwin") {
     for (
       const framework of [
+        "/Library/Frameworks/Python.framework/Versions",
         "/opt/homebrew/Frameworks/Python.framework/Versions",
         "/usr/local/Frameworks/Python.framework/Versions",
       ]
