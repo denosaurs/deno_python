@@ -38,7 +38,7 @@ if (!("Deno" in globalThis) && "Bun" in globalThis) {
       for (const name in symbols) {
         const symbol = symbols[name];
         if ("type" in symbol) {
-          // throw new Error("Symbol type not supported");
+          throw new Error("Symbol type not supported");
         } else {
           bunSymbols[name] = {
             args: symbol.parameters.map((type) => this.transformFFIType(type)),
