@@ -2,7 +2,7 @@
   "name": "bunpy",
   "version": "0.3.3",
   "description": "JavaScript -> Python Bridge for Deno and Bun",
-  "main": "mod.ts",
+  "main": "mod.bun.ts",
   "directories": {
     "example": "examples",
     "test": "test"
