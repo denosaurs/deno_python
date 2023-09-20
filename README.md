@@ -11,7 +11,7 @@ Python by integrating with the
 between the two languages, enabling you to pass data and execute python code
 from within your JS applications. This enables access to the large and wonderful
 [python ecosystem](https://pypi.org/) while remaining native (unlike a runtime
-like the wondeful [pyodide](https://github.com/pyodide/pyodide) which is
+like the wonderful [pyodide](https://github.com/pyodide/pyodide) which is
 compiled to wasm, sandboxed and may not work with all python packages) and
 simply using the existing python installation.
 
