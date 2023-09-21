@@ -1,14 +1,4 @@
 export const SYMBOLS = {
-  Py_DecodeLocale: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  Py_SetProgramName: {
-    parameters: ["pointer"],
-    result: "void",
-  },
-
   Py_Initialize: {
     parameters: [],
     result: "void",
@@ -26,11 +16,6 @@ export const SYMBOLS = {
 
   PyImport_ImportModule: {
     parameters: ["buffer"],
-    result: "pointer",
-  },
-
-  PyEval_GetBuiltins: {
-    parameters: [],
     result: "pointer",
   },
 
@@ -85,11 +70,6 @@ export const SYMBOLS = {
     result: "pointer",
   },
 
-  PyObject_CallObject: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
   PyObject_GetAttrString: {
     parameters: ["pointer", "buffer"],
     result: "pointer",
@@ -127,11 +107,6 @@ export const SYMBOLS = {
 
   PyObject_RichCompareBool: {
     parameters: ["pointer", "pointer", "i32"],
-    result: "i32",
-  },
-
-  PyDict_Next: {
-    parameters: ["pointer", "pointer", "pointer", "pointer"],
     result: "i32",
   },
 
@@ -205,106 +180,6 @@ export const SYMBOLS = {
     result: "pointer",
   },
 
-  PyBytes_FromStringAndSize: {
-    parameters: ["pointer", "i32"],
-    result: "pointer",
-  },
-
-  PyBytes_AsStringAndSize: {
-    parameters: ["pointer", "pointer", "pointer"],
-    result: "i32",
-  },
-
-  PyBool_Type: {
-    parameters: [],
-    result: "pointer",
-  },
-
-  PySlice_Type: {
-    parameters: [],
-    result: "pointer",
-  },
-
-  PyNumber_Add: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_Subtract: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_Multiply: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_TrueDivide: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_InPlaceAdd: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_InPlaceSubtract: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_InPlaceMultiply: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_InPlaceTrueDivide: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_Negative: {
-    parameters: ["pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_And: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_Or: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_Xor: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_InPlaceAnd: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_InPlaceOr: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_InPlaceXor: {
-    parameters: ["pointer", "pointer"],
-    result: "pointer",
-  },
-
-  PyNumber_Invert: {
-    parameters: ["pointer"],
-    result: "pointer",
-  },
-
   PyList_Size: {
     parameters: ["pointer"],
     result: "i32",
@@ -368,10 +243,6 @@ export const SYMBOLS = {
   PyTuple_GetItem: {
     parameters: ["pointer", "i32"],
     result: "pointer",
-  },
-
-  PyTuple_Pack: {
-    type: "pointer",
   },
 
   PyCFunction_NewEx: {

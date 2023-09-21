@@ -1,0 +1,26 @@
+{
+  "name": "bunpy",
+  "version": "0.3.3",
+  "description": "JavaScript -> Python Bridge for Deno and Bun",
+  "main": "mod.bun.ts",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "deno task test && bun test"
+  },
+  "files": [
+    "mod.ts",
+    "ext/pip.ts",
+    "src/bun_compat.js",
+    "src/ffi.ts",
+    "src/python.ts",
+    "src/symbols.ts",
+    "src/util.ts",
+    "plugin.ts"
+  ],
+  "keywords": [],
+  "author": "DjDeveloperr",
+  "license": "MIT"
+}

@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertThrows } from "./deps.ts";
+import { assert, assertEquals, assertThrows } from "./asserts.ts";
 import {
   kw,
   NamedArgument,
@@ -13,7 +13,7 @@ console.log("Python version:", version);
 console.log("Executable:", executable);
 
 Deno.test("python version", () => {
-  assert(String(version).match(/^\d+\.\d+\.\d+/));
+  assert(version.toString().match(/^\d+\.\d+\.\d+/));
 });
 
 Deno.test("types", async (t) => {

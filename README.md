@@ -1,19 +1,19 @@
-# deno_python
+# Python Bridge
 
 [![Tags](https://img.shields.io/github/release/denosaurs/deno_python)](https://github.com/denosaurs/deno_python/releases)
 [![deno doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/python/mod.ts)
 [![checks](https://github.com/denosaurs/deno_python/actions/workflows/checks.yml/badge.svg)](https://github.com/denosaurs/deno_python/actions/workflows/checks.yml)
 [![License](https://img.shields.io/github/license/denosaurs/deno_python)](https://github.com/denosaurs/deno_python/blob/master/LICENSE)
 
-This module provides a seamless integration between deno and python by
-integrating with the [Python/C API](https://docs.python.org/3/c-api/index.html).
-It acts as a bridge between the two languages, enabling you to pass data and
-execute python code from within your deno applications. This enables access to
-the large and wonderful [python ecosystem](https://pypi.org/) while remaining
-native (unlike a runtime like the wonderful
-[pyodide](https://github.com/pyodide/pyodide) which is compiled to wasm,
-sandboxed and may not work with all python packages) and simply using the
-existing python installation.
+This module provides a seamless integration between JavaScript (Deno/Bun) and
+Python by integrating with the
+[Python/C API](https://docs.python.org/3/c-api/index.html). It acts as a bridge
+between the two languages, enabling you to pass data and execute python code
+from within your JS applications. This enables access to the large and wonderful
+[python ecosystem](https://pypi.org/) while remaining native (unlike a runtime
+like the wonderful [pyodide](https://github.com/pyodide/pyodide) which is
+compiled to wasm, sandboxed and may not work with all python packages) and
+simply using the existing python installation.
 
 ## Example
 
@@ -38,6 +38,23 @@ permissions since enabling FFI effectively escapes the permissions sandbox.
 
 ```shell
 deno run -A --unstable <file>
+```
+
+### Usage in Bun
+
+You can import from the `bunpy` NPM package to use this module in Bun.
+
+```ts
+import { python } from "bunpy";
+
+const np = python.import("numpy");
+const plt = python.import("matplotlib.pyplot");
+
+const xpoints = np.array([1, 8]);
+const ypoints = np.array([3, 10]);
+
+plt.plot(xpoints, ypoints);
+plt.show();
 ```
 
 ### Dependencies
