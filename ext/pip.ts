@@ -1,12 +1,12 @@
 import { kw, python, PythonError } from "../mod.ts";
 
-import { join } from "https://deno.land/std@0.198.0/path/mod.ts";
-import { ensureDir } from "https://deno.land/std@0.198.0/fs/mod.ts";
-import { green, yellow } from "https://deno.land/std@0.198.0/fmt/colors.ts";
+import { join } from "https://deno.land/std@0.203.0/path/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.203.0/fs/mod.ts";
+import { green, yellow } from "https://deno.land/std@0.203.0/fmt/colors.ts";
 
-import type { CacheLocation } from "https://deno.land/x/plug@1.0.2/types.ts";
-import { ensureCacheLocation } from "https://deno.land/x/plug@1.0.2/download.ts";
-import { hash } from "https://deno.land/x/plug@1.0.2/util.ts";
+import type { CacheLocation } from "https://deno.land/x/plug@1.0.3/types.ts";
+import { ensureCacheLocation } from "https://deno.land/x/plug@1.0.3/download.ts";
+import { hash } from "https://deno.land/x/plug@1.0.3/util.ts";
 
 const sys = python.import("sys");
 const runpy = python.import("runpy");
