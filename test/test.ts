@@ -298,6 +298,21 @@ def call(cb):
   cb.destroy();
 });
 
+Deno.test("callback returns void", () => {
+  const { call } = python.runModule(
+    `
+def call(cb):
+  cb()
+  `,
+    "cb_test.py",
+  );
+  const cb = python.callback(() => {
+    // return void
+  });
+  call(cb);
+  cb.destroy();
+});
+
 Deno.test("exceptions", async (t) => {
   await t.step("simple exception", () => {
     assertThrows(() => python.runModule("1 / 0"));

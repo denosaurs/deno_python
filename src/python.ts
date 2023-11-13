@@ -61,6 +61,7 @@ export interface PythonProxy {
 export type PythonConvertible =
   | number
   | bigint
+  | void
   | null
   | undefined
   | boolean
@@ -434,7 +435,7 @@ export class PyObject {
       }
 
       case "object": {
-        if (v === null) {
+        if (v === null /*or void*/) {
           return python.builtins.None[ProxiedPyObject];
         } else if (ProxiedPyObject in v) {
           const proxy = v as PythonProxy;
