@@ -190,6 +190,11 @@ export class Callback {
  * C PyObject.
  */
 export class PyObject {
+  /**
+   * A Python callabale object as Uint8Array
+   * This is used with `PyCFunction_NewEx` in order to extend its liftime and not allow v8 to release it before its actually used
+   */
+  #pyMethodDef?: Uint8Array;
   constructor(public handle: Deno.PointerValue) {}
 
   /**
@@ -447,8 +452,8 @@ export class PyObject {
           }
           return new PyObject(list);
         } else if (v instanceof Callback) {
-          const struct = new Uint8Array(8 + 8 + 4 + 8);
-          const view = new DataView(struct.buffer);
+          const pyMethodDef = new Uint8Array(8 + 8 + 4 + 8);
+          const view = new DataView(pyMethodDef.buffer);
           const LE =
             new Uint8Array(new Uint32Array([0x12345678]).buffer)[0] !== 0x7;
           const nameBuf = new TextEncoder().encode(
@@ -471,11 +476,16 @@ export class PyObject {
             LE,
           );
           const fn = py.PyCFunction_NewEx(
-            struct,
+            pyMethodDef,
             PyObject.from(null).handle,
             null,
           );
-          return new PyObject(fn);
+
+          // NOTE: we need to extend `pyMethodDef` lifetime
+          // Otherwise V8 can release it before the callback is called
+          const pyObject = new PyObject(fn);
+          pyObject.#pyMethodDef = pyMethodDef;
+          return pyObject;
         } else if (v instanceof PyObject) {
           return v;
         } else if (v instanceof Set) {
