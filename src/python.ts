@@ -452,7 +452,9 @@ export class PyObject {
           }
           return new PyObject(list);
         } else if (v instanceof Callback) {
-          const pyMethodDef = new Uint8Array(8 + 8 + 4 + 8);
+          // https://docs.python.org/3/c-api/structures.html#c.PyMethodDef
+          // there are extra 4 bytes of padding after ml_flags field
+          const pyMethodDef = new Uint8Array(8 + 8 + 4 + 4 + 8);
           const view = new DataView(pyMethodDef.buffer);
           const LE =
             new Uint8Array(new Uint32Array([0x12345678]).buffer)[0] !== 0x7;
@@ -471,7 +473,7 @@ export class PyObject {
           );
           view.setInt32(16, 0x1 | 0x2, LE);
           view.setBigUint64(
-            20,
+            24,
             BigInt(Deno.UnsafePointer.value(Deno.UnsafePointer.of(nameBuf)!)),
             LE,
           );
