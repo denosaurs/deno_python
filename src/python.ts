@@ -965,6 +965,34 @@ export class Python {
   callback(cb: PythonJSCallback): Callback {
     return new Callback(cb);
   }
+
+  /**
+   * Creates a Python instance method from a JavaScript callback.
+   *
+   * @description
+   * This method takes a JavaScript callback function and creates a Python instance method.
+   *
+   * The method returns both the created Python instance method and the Callback object.
+   * The Callback object is returned to allow the user to explicitly call its `destroy`
+   * method when it's no longer needed, ensuring proper resource management and
+   * freeing of memory.
+   *
+   * @example
+   * const [pyMethod, callback] = instanceMethod(myJSFunction);
+   * // Use pyMethod as needed
+   * // ...
+   * // When done, explicitly free the callback
+   * callback.destroy();
+   */
+  instanceMethod(cb: PythonJSCallback): [PyObject, Callback] {
+    const pythonCb = python.callback(cb);
+    const method = new PyObject(
+      py.PyInstanceMethod_New(
+        PyObject.from(pythonCb).handle,
+      ),
+    );
+    return [method, pythonCb];
+  }
 }
 
 /**
