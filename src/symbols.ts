@@ -249,4 +249,9 @@ export const SYMBOLS = {
     parameters: ["buffer", "pointer", "pointer"],
     result: "pointer",
   },
+
+  PyInstanceMethod_New: {
+    parameters: ["pointer"],
+    result: "pointer",
+  },
 } as const;
