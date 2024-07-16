@@ -324,3 +324,19 @@ Deno.test("exceptions", async (t) => {
     assertThrows(() => array.shape = [3, 6]);
   });
 });
+
+Deno.test("callbacks have signature", async (t) => {
+  const inspect = python.import("inspect");
+
+  await t.step("empty arguments", () => {
+    const fn = python.callback(() => {});
+    assertEquals(inspect.signature(fn).toString(), "()");
+    fn.destroy();
+  });
+
+  await t.step("with no arguments", () => {
+    const fn = python.callback((_f, _b, _c) => {});
+    assertEquals(inspect.signature(fn).toString(), "(a, b, c)");
+    fn.destroy();
+  });
+});
