@@ -44,7 +44,7 @@ for (const path of searchPath) {
   } catch (err) {
     if (err instanceof TypeError && !("Bun" in globalThis)) {
       throw new Error(
-        "Cannot load dynamic library because --unstable flag was not set",
+        "Cannot load dynamic library because --unstable-ffi flag was not set",
         { cause: err },
       );
     }

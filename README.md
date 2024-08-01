@@ -32,12 +32,13 @@ plt.plot(xpoints, ypoints);
 plt.show();
 ```
 
-When running, you **must** specify `--allow-ffi`, `--allow-env` and `--unstable`
-flags. Alternatively, you may also just specify `-A` instead of specific
-permissions since enabling FFI effectively escapes the permissions sandbox.
+When running, you **must** specify `--allow-ffi`, `--allow-env` and
+`--unstable-ffi` flags. Alternatively, you may also just specify `-A` instead of
+specific permissions since enabling FFI effectively escapes the permissions
+sandbox.
 
 ```shell
-deno run -A --unstable <file>
+deno run -A --unstable-ffi <file>
 ```
 
 ### Usage in Bun

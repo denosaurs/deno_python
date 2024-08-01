@@ -65,7 +65,12 @@ jobs:
           python-version: '3.12'
 
       - name: Install NumPy
+        if: ${{ matrix.os != 'macos-latest' }}
         run: python3 -m pip install numpy
+
+      - name: Install NumPy on MacOs
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: python3 -m pip install --user --break-system-packages numpy
 
       - name: Run deno test
         run: deno task test
