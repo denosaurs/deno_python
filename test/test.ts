@@ -325,6 +325,26 @@ Deno.test("exceptions", async (t) => {
   });
 });
 
+Deno.test("instance method", () => {
+  const { A } = python.runModule(
+    `
+class A:
+  def b(self):
+    return 4
+  `,
+    "cb_test.py",
+  );
+
+  const [m, cb] = python.instanceMethod((_args, self) => {
+    return self.b();
+  });
+  // Modifying PyObject modifes A
+  PyObject.from(A).setAttr("a", m);
+
+  assertEquals(new A().a.call().valueOf(), 4);
+  cb.destroy();
+});
+
 Deno.test("callbacks have signature", async (t) => {
   const inspect = python.import("inspect");
 
