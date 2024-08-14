@@ -458,9 +458,9 @@ export class PyObject {
           const view = new DataView(pyMethodDef.buffer);
           const LE =
             new Uint8Array(new Uint32Array([0x12345678]).buffer)[0] !== 0x7;
-          const nameBuf = new TextEncoder().encode(
-            "JSCallback:" + (v.callback.name || "anonymous") + "\0",
-          );
+
+          const name = "JSCallback:" + (v.callback.name || "anonymous");
+          const nameBuf = new TextEncoder().encode(`${name}\0`);
           view.setBigUint64(
             0,
             BigInt(Deno.UnsafePointer.value(Deno.UnsafePointer.of(nameBuf)!)),
@@ -472,9 +472,19 @@ export class PyObject {
             LE,
           );
           view.setInt32(16, 0x1 | 0x2, LE);
+          // https://github.com/python/cpython/blob/f27593a87c344f3774ca73644a11cbd5614007ef/Objects/typeobject.c#L688
+          const SIGNATURE_END_MARKER = ")\n--\n\n";
+          // We're not using the correct arguments name, but just using dummy ones (because they're not accessible in js)
+          const fnArgs = [...Array(v.callback.length).keys()]
+            .map((_, i) => String.fromCharCode(97 + i)).join(",");
+          const docBuf = `${name}(${fnArgs}${SIGNATURE_END_MARKER}\0`;
           view.setBigUint64(
             24,
-            BigInt(Deno.UnsafePointer.value(Deno.UnsafePointer.of(nameBuf)!)),
+            BigInt(
+              Deno.UnsafePointer.value(
+                Deno.UnsafePointer.of(new TextEncoder().encode(docBuf))!,
+              ),
+            ),
             LE,
           );
           const fn = py.PyCFunction_NewEx(
