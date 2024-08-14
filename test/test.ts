@@ -344,3 +344,19 @@ class A:
   assertEquals(new A().a.call().valueOf(), 4);
   cb.destroy();
 });
+
+Deno.test("callbacks have signature", async (t) => {
+  const inspect = python.import("inspect");
+
+  await t.step("empty arguments", () => {
+    const fn = python.callback(() => {});
+    assertEquals(inspect.signature(fn).toString(), "()");
+    fn.destroy();
+  });
+
+  await t.step("with no arguments", () => {
+    const fn = python.callback((_f, _b, _c) => {});
+    assertEquals(inspect.signature(fn).toString(), "(a, b, c)");
+    fn.destroy();
+  });
+});
