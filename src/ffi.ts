@@ -9,7 +9,7 @@ const DENO_PYTHON_PATH = Deno.env.get("DENO_PYTHON_PATH");
 if (DENO_PYTHON_PATH) {
   searchPath.push(DENO_PYTHON_PATH);
 } else {
-  if (Deno.build.os === "windows" || Deno.build.os === "linux") {
+  if (Deno.build.os === "windows" || Deno.build.os === "linux" || Deno.build.os === "windows_nt") {
     searchPath.push(
       ...SUPPORTED_VERSIONS.map(([major, minor]) =>
         `${Deno.build.os === "linux" ? "lib" : ""}python${major}${
