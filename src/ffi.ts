@@ -3,7 +3,7 @@ import { postSetup } from "./util.ts";
 
 const searchPath: string[] = [];
 
-const SUPPORTED_VERSIONS = [[3, 12], [3, 11], [3, 10], [3, 9], [3, 8]];
+const SUPPORTED_VERSIONS = [[3, 13], [3, 12], [3, 11], [3, 10], [3, 9], [3, 8]];
 const DENO_PYTHON_PATH = Deno.env.get("DENO_PYTHON_PATH");
 
 if (DENO_PYTHON_PATH) {
