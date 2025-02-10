@@ -949,7 +949,7 @@ export class Python {
    * Runs Python script as a module and returns its module object,
    * for using its attributes, functions, classes, etc. from JavaScript.
    */
-  runModule(code: string, name?: string): PythonProxy {
+  runModule(code: string, name?: string): any {
     const module = py.PyImport_ExecCodeModule(
       cstr(name ?? "__main__"),
       PyObject.from(
