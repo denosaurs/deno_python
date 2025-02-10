@@ -824,7 +824,7 @@ export class PyObject {
 
 /** Python-related error. */
 export class PythonError extends Error {
-  name = "PythonError";
+  override name = "PythonError";
 
   constructor(
     public type: PyObject,
@@ -947,6 +947,7 @@ export class Python {
         .handle,
     );
     if (module === null) {
+      maybeThrowError();
       throw new EvalError("Failed to run python module");
     }
     return new PyObject(module)?.proxy;
