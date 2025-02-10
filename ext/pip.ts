@@ -150,12 +150,14 @@ export class Pip {
         entrypoint = entrypoints[entrypoints.indexOf(name)];
       } else {
         console.warn(
-          `${yellow(
-            "Warning",
-          )
-          } could not determine a single entrypoint for module ${module}, please specify one of: ${entrypoints.join(
-            ", ",
-          )
+          `${
+            yellow(
+              "Warning",
+            )
+          } could not determine a single entrypoint for module ${module}, please specify one of: ${
+            entrypoints.join(
+              ", ",
+            )
           }. Importing ${entrypoint}`,
         );
       }

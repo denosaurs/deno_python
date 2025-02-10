@@ -198,7 +198,7 @@ export class PyObject {
    * This is used with `PyCFunction_NewEx` in order to extend its liftime and not allow v8 to release it before its actually used
    */
   #pyMethodDef?: Uint8Array;
-  constructor(public handle: Deno.PointerValue) { }
+  constructor(public handle: Deno.PointerValue) {}
 
   /**
    * Check if the object is NULL (pointer) or None type in Python.
@@ -408,7 +408,11 @@ export class PyObject {
    */
   equals(rhs: PythonConvertible): boolean {
     const rhsObject = PyObject.from(rhs);
-    const comparison = py.PyObject_RichCompareBool(this.handle, rhsObject.handle, 3);
+    const comparison = py.PyObject_RichCompareBool(
+      this.handle,
+      rhsObject.handle,
+      3,
+    );
     if (comparison === -1) {
       maybeThrowError();
     }
@@ -519,7 +523,7 @@ export class PyObject {
           const dict = py.PyDict_New();
           for (
             const [key, value]
-            of (v instanceof Map ? v.entries() : Object.entries(v))
+              of (v instanceof Map ? v.entries() : Object.entries(v))
           ) {
             const keyObj = PyObject.from(key);
             const valueObj = PyObject.from(value);
