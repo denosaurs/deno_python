@@ -138,7 +138,10 @@ export function kw(
  * ```
  */
 export class Callback {
-  unsafe;
+  unsafe: Deno.UnsafeCallback<{
+    parameters: ["pointer", "pointer", "pointer"];
+    result: "pointer";
+  }>;
 
   constructor(public callback: PythonJSCallback) {
     this.unsafe = new Deno.UnsafeCallback(
@@ -195,12 +198,12 @@ export class PyObject {
    * This is used with `PyCFunction_NewEx` in order to extend its liftime and not allow v8 to release it before its actually used
    */
   #pyMethodDef?: Uint8Array;
-  constructor(public handle: Deno.PointerValue) {}
+  constructor(public handle: Deno.PointerValue) { }
 
   /**
    * Check if the object is NULL (pointer) or None type in Python.
    */
-  get isNone() {
+  get isNone(): boolean {
     // deno-lint-ignore ban-ts-comment
     // @ts-expect-error
     return this.handle === null || this.handle === 0 ||
@@ -403,9 +406,13 @@ export class PyObject {
   /**
    * Performs an equals operation on the Python object.
    */
-  equals(rhs: PythonConvertible) {
+  equals(rhs: PythonConvertible): boolean {
     const rhsObject = PyObject.from(rhs);
-    return py.PyObject_RichCompareBool(this.handle, rhsObject.handle, 3);
+    const comparison = py.PyObject_RichCompareBool(this.handle, rhsObject.handle, 3);
+    if (comparison === -1) {
+      maybeThrowError();
+    }
+    return comparison === 1;
   }
 
   /**
@@ -512,7 +519,7 @@ export class PyObject {
           const dict = py.PyDict_New();
           for (
             const [key, value]
-              of (v instanceof Map ? v.entries() : Object.entries(v))
+            of (v instanceof Map ? v.entries() : Object.entries(v))
           ) {
             const keyObj = PyObject.from(key);
             const valueObj = PyObject.from(value);
@@ -590,7 +597,7 @@ export class PyObject {
   /**
    * Tries to set the attribute, throws an error otherwise.
    */
-  setAttr(name: string, v: PythonConvertible) {
+  setAttr(name: string, v: PythonConvertible): void {
     if (
       py.PyObject_SetAttrString(
         this.handle,
@@ -603,35 +610,35 @@ export class PyObject {
   }
 
   /** Checks if Python object has an attribute of given name. */
-  hasAttr(attr: string) {
+  hasAttr(attr: string): boolean {
     return py.PyObject_HasAttrString(this.handle, cstr(attr)) !== 0;
   }
 
   /**
    * Casts a Bool Python object as JS Boolean value.
    */
-  asBoolean() {
+  asBoolean(): boolean {
     return py.PyLong_AsLong(this.handle) === 1;
   }
 
   /**
    * Casts a Int Python object as JS Number value.
    */
-  asLong() {
+  asLong(): number {
     return py.PyLong_AsLong(this.handle) as number;
   }
 
   /**
    * Casts a Float (Double) Python object as JS Number value.
    */
-  asDouble() {
+  asDouble(): number {
     return py.PyFloat_AsDouble(this.handle) as number;
   }
 
   /**
    * Casts a String Python object as JS String value.
    */
-  asString() {
+  asString(): string | null {
     const str = py.PyUnicode_AsUTF8(this.handle);
     return str !== null ? Deno.UnsafePointerView.getCString(str) : null;
   }
@@ -639,7 +646,7 @@ export class PyObject {
   /**
    * Casts a List Python object as JS Array value.
    */
-  asArray() {
+  asArray(): PythonConvertible[] {
     const array: PythonConvertible[] = [];
     for (const i of this) {
       array.push(i.valueOf());
@@ -653,7 +660,7 @@ export class PyObject {
    * Note: `from` supports converting both Map and Object to Python Dict.
    * But this only supports returning a Map.
    */
-  asDict() {
+  asDict(): Map<PythonConvertible, PythonConvertible> {
     const dict = new Map<PythonConvertible, PythonConvertible>();
     const keys = py.PyDict_Keys(this.handle);
     const length = py.PyList_Size(keys) as number;
@@ -669,7 +676,7 @@ export class PyObject {
     return dict;
   }
 
-  *[Symbol.iterator]() {
+  *[Symbol.iterator](): Generator<PyObject> {
     const iter = py.PyObject_GetIter(this.handle);
     let item = py.PyIter_Next(iter);
     while (item !== null) {
@@ -682,8 +689,8 @@ export class PyObject {
   /**
    * Casts a Set Python object as JS Set object.
    */
-  asSet() {
-    const set = new Set();
+  asSet(): Set<PythonConvertible> {
+    const set = new Set<PythonConvertible>();
     for (const i of this) {
       set.add(i.valueOf());
     }
@@ -693,7 +700,7 @@ export class PyObject {
   /**
    * Casts a Tuple Python object as JS Array value.
    */
-  asTuple() {
+  asTuple(): PythonConvertible[] {
     const tuple = new Array<PythonConvertible>();
     const length = py.PyTuple_Size(this.handle) as number;
     for (let i = 0; i < length; i++) {
@@ -711,7 +718,7 @@ export class PyObject {
    * Only primitives are casted as JS value type, otherwise returns
    * a proxy to Python object.
    */
-  valueOf() {
+  valueOf(): any {
     const type = py.PyObject_Type(this.handle);
 
     if (Deno.UnsafePointer.equals(type, python.None[ProxiedPyObject].handle)) {
@@ -759,7 +766,7 @@ export class PyObject {
   call(
     positional: (PythonConvertible | NamedArgument)[] = [],
     named: Record<string, PythonConvertible> = {},
-  ) {
+  ): PyObject {
     // count named arguments
     const namedCount = positional.filter(
       (arg) => arg instanceof NamedArgument,
@@ -808,16 +815,16 @@ export class PyObject {
   /**
    * Returns `str` representation of the Python object.
    */
-  toString() {
+  toString(): string {
     return new PyObject(py.PyObject_Str(this.handle))
-      .asString();
+      .asString()!;
   }
 
-  [Symbol.for("Deno.customInspect")]() {
+  [Symbol.for("Deno.customInspect")](): string {
     return this.toString();
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")]() {
+  [Symbol.for("nodejs.util.inspect.custom")](): string {
     return this.toString();
   }
 }
@@ -928,7 +935,7 @@ export class Python {
   /**
    * Runs Python script from the given string.
    */
-  run(code: string) {
+  run(code: string): void {
     if (py.PyRun_SimpleString(cstr(code)) !== 0) {
       throw new EvalError("Failed to run python code");
     }
@@ -938,7 +945,7 @@ export class Python {
    * Runs Python script as a module and returns its module object,
    * for using its attributes, functions, classes, etc. from JavaScript.
    */
-  runModule(code: string, name?: string) {
+  runModule(code: string, name?: string): PythonProxy {
     const module = py.PyImport_ExecCodeModule(
       cstr(name ?? "__main__"),
       PyObject.from(
@@ -956,7 +963,7 @@ export class Python {
   /**
    * Import a module as PyObject.
    */
-  importObject(name: string) {
+  importObject(name: string): PyObject {
     const mod = py.PyImport_ImportModule(cstr(name));
     if (mod === null) {
       maybeThrowError();
@@ -968,7 +975,7 @@ export class Python {
   /**
    * Import a Python module as a proxy object.
    */
-  import(name: string) {
+  import(name: string): any {
     return this.importObject(name).proxy;
   }
 
@@ -1013,7 +1020,7 @@ export class Python {
  * and also make use of some common built-ins attached to
  * this object, such as `str`, `int`, `tuple`, etc.
  */
-export const python = new Python();
+export const python: Python = new Python();
 
 /**
  * Returns true if the value can be converted into a Python slice or

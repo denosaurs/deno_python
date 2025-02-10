@@ -1,5 +1,5 @@
-import py, { Python } from "./mod.ts";
-import { Pip, pip } from "./ext/pip.ts";
+import py, { type Python } from "./mod.ts";
+import { type Pip, pip } from "./ext/pip.ts";
 
 declare global {
   const py: Python;

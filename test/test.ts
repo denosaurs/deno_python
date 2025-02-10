@@ -5,7 +5,7 @@ import {
   ProxiedPyObject,
   PyObject,
   python,
-  PythonProxy,
+  type PythonProxy,
 } from "../mod.ts";
 
 const { version, executable } = python.import("sys");

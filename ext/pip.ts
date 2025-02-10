@@ -118,7 +118,8 @@ export class Pip {
    *
    * ```
    */
-  async import(module: string, entrypoint?: string) {
+  // deno-lint-ignore no-explicit-any
+  async import(module: string, entrypoint?: string): Promise<any> {
     const { name } = getModuleNameAndVersion(module);
 
     await this.install(module);
@@ -149,14 +150,12 @@ export class Pip {
         entrypoint = entrypoints[entrypoints.indexOf(name)];
       } else {
         console.warn(
-          `${
-            yellow(
-              "Warning",
-            )
-          } could not determine a single entrypoint for module ${module}, please specify one of: ${
-            entrypoints.join(
-              ", ",
-            )
+          `${yellow(
+            "Warning",
+          )
+          } could not determine a single entrypoint for module ${module}, please specify one of: ${entrypoints.join(
+            ", ",
+          )
           }. Importing ${entrypoint}`,
         );
       }
@@ -166,5 +165,5 @@ export class Pip {
   }
 }
 
-export const pip = new Pip();
+export const pip: Pip = new Pip();
 export default pip;
