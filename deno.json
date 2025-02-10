@@ -1,4 +1,10 @@
 {
+  "name": "@denosaurs/python",
+  "version": "0.4.4",
+  "exports": {
+    ".": "./mod.ts",
+    "./ext/pip": "./ext/pip.ts"
+  },
   "tasks": {
     "check": "deno task check:mod && deno task check:ext && deno task check:examples",
     "check:mod": "deno check --unstable-ffi mod.ts",

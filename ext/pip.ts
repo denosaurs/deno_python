@@ -118,7 +118,8 @@ export class Pip {
    *
    * ```
    */
-  async import(module: string, entrypoint?: string) {
+  // deno-lint-ignore no-explicit-any
+  async import(module: string, entrypoint?: string): Promise<any> {
     const { name } = getModuleNameAndVersion(module);
 
     await this.install(module);
@@ -166,5 +167,5 @@ export class Pip {
   }
 }
 
-export const pip = new Pip();
+export const pip: Pip = new Pip();
 export default pip;

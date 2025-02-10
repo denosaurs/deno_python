@@ -117,6 +117,29 @@ the Python dynamic library, which is like `python310.dll` (Windows),
 `libpython310.dylib` (macOS) and `libpython310.so` (Linux) depending on
 platform.
 
+## Usage with docker
+
+Usage with docker is easiest done using the
+[`denoland/deno:bin` image](https://github.com/denoland/deno_docker?tab=readme-ov-file#using-your-own-base-image)
+along with the [official `python` image](https://hub.docker.com/_/python/).
+
+```Dockerfile
+ARG DENO_VERSION=1.38.2
+ARG PYTHON_VERSION=3.12
+
+FROM denoland/deno:bin-$DENO_VERSION AS deno
+FROM python:$PYTHON_VERSION
+
+# Copy and configure deno
+COPY --from=deno /deno /usr/local/bin/deno
+ENTRYPOINT ["/usr/local/bin/deno"]
+
+# Copy your project source
+COPY . .
+
+RUN ["run", "-A", "--unstable", "https://deno.land/x/python@0.4.2/examples/hello_python.ts"]
+```
+
 ## Maintainers
 
 - DjDeveloper ([@DjDeveloperr](https://github.com/DjDeveloperr))
