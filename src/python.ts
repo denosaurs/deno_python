@@ -180,7 +180,6 @@ export class Callback {
 
           const errorTypeHandle =
             python.builtins.RuntimeError[ProxiedPyObject].handle;
-          console.log(errorTypeHandle);
 
           // Set the Python exception (type and message)
           py.PyErr_SetString(errorTypeHandle, cErrorMessage);
