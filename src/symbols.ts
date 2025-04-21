@@ -39,6 +39,11 @@ export const SYMBOLS = {
     result: "void",
   },
 
+  PyErr_SetString: {
+    parameters: ["pointer", "buffer"], // type, message
+    result: "void",
+  },
+
   PyDict_New: {
     parameters: [],
     result: "pointer",
