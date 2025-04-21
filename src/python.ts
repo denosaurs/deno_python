@@ -184,7 +184,7 @@ export class Callback {
           // Set the Python exception (type and message)
           py.PyErr_SetString(errorTypeHandle, cErrorMessage);
 
-          return PyObject.from(null).handle;
+          return null;
         }
       },
     );
