@@ -360,3 +360,27 @@ Deno.test("callbacks have signature", async (t) => {
     fn.destroy();
   });
 });
+
+Deno.test("js exception inside python callback returns python exception", () => {
+  const pyCallback = python.callback(() => {
+    throw new Error("This is an intentional error from JS!");
+  });
+
+  const pyModule = python.runModule(
+    `
+def call_the_callback(cb):
+  result = cb()
+  return result
+  `,
+    "test_module",
+  );
+
+  try {
+    pyModule.call_the_callback(pyCallback);
+  } catch (e) {
+    // deno-lint-ignore no-explicit-any
+    assertEquals((e as any).name, "PythonError");
+  } finally {
+    pyCallback.destroy();
+  }
+});

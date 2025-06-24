@@ -154,13 +154,38 @@ export class Callback {
         args: Deno.PointerValue,
         kwargs: Deno.PointerValue,
       ) => {
-        return PyObject.from(callback(
-          kwargs === null ? {} : Object.fromEntries(
-            new PyObject(kwargs).asDict()
-              .entries(),
-          ),
-          ...(args === null ? [] : new PyObject(args).valueOf()),
-        )).handle;
+        let result: PythonConvertible;
+        // Prepare arguments for the JS callback
+        try {
+          // Prepare arguments for the JS callback
+          const jsKwargs = kwargs === null
+            ? {}
+            : Object.fromEntries(new PyObject(kwargs).asDict().entries());
+          const jsArgs = args === null ? [] : new PyObject(args).valueOf();
+
+          // Call the actual JS function
+          result = callback(jsKwargs, ...jsArgs);
+
+          // Convert the JS return value back to a Python object
+          return PyObject.from(result).handle;
+        } catch (e) {
+          // An error occurred in the JS callback.
+          // We need to set a Python exception and return NULL.
+
+          // Prepare the error message for Python
+          const errorMessage = e instanceof Error
+            ? `${e.name}: ${e.message}` // Include JS error type and message
+            : String(e); // Fallback for non-Error throws
+          const cErrorMessage = cstr(`JS Callback Error: ${errorMessage}`);
+
+          const errorTypeHandle =
+            python.builtins.RuntimeError[ProxiedPyObject].handle;
+
+          // Set the Python exception (type and message)
+          py.PyErr_SetString(errorTypeHandle, cErrorMessage);
+
+          return null;
+        }
       },
     );
   }
