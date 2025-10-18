@@ -42,7 +42,7 @@ export function postSetup(lib: string) {
 /**
  * Encodes a C string.
  */
-export function cstr(str: string): Uint8Array {
+export function cstr(str: string): Uint8Array<ArrayBuffer> {
   const buf = new Uint8Array(str.length + 1);
   encoder.encodeInto(str, buf);
   return buf;

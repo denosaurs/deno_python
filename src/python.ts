@@ -143,6 +143,14 @@ export class Callback {
     result: "pointer";
   }>;
 
+  // Keep native-facing buffers alive for as long as this Callback exists
+  /** @private */
+  _pyMethodDef?: Uint8Array<ArrayBuffer>;
+  /** @private */
+  _nameBuf?: Uint8Array<ArrayBuffer>;
+  /** @private */
+  _docBuf?: Uint8Array<ArrayBuffer>;
+
   constructor(public callback: PythonJSCallback) {
     this.unsafe = new Deno.UnsafeCallback(
       {
@@ -490,16 +498,20 @@ export class PyObject {
         } else if (v instanceof Callback) {
           // https://docs.python.org/3/c-api/structures.html#c.PyMethodDef
           // there are extra 4 bytes of padding after ml_flags field
-          const pyMethodDef = new Uint8Array(8 + 8 + 4 + 4 + 8);
-          const view = new DataView(pyMethodDef.buffer);
+          // Build and pin PyMethodDef + string buffers on the Callback instance
+          const methodDef = new Uint8Array(8 + 8 + 4 + 4 + 8);
+          v._pyMethodDef = methodDef;
+          const view = new DataView(methodDef.buffer);
           const LE =
             new Uint8Array(new Uint32Array([0x12345678]).buffer)[0] !== 0x7;
 
           const name = "JSCallback:" + (v.callback.name || "anonymous");
-          const nameBuf = new TextEncoder().encode(`${name}\0`);
+          v._nameBuf = new TextEncoder().encode(`${name}\0`);
           view.setBigUint64(
             0,
-            BigInt(Deno.UnsafePointer.value(Deno.UnsafePointer.of(nameBuf)!)),
+            BigInt(
+              Deno.UnsafePointer.value(Deno.UnsafePointer.of(v._nameBuf)!),
+            ),
             LE,
           );
           view.setBigUint64(
@@ -507,32 +519,35 @@ export class PyObject {
             BigInt(Deno.UnsafePointer.value(v.unsafe.pointer)),
             LE,
           );
+          // METH_VARARGS | METH_KEYWORDS
           view.setInt32(16, 0x1 | 0x2, LE);
+
           // https://github.com/python/cpython/blob/f27593a87c344f3774ca73644a11cbd5614007ef/Objects/typeobject.c#L688
           const SIGNATURE_END_MARKER = ")\n--\n\n";
           // We're not using the correct arguments name, but just using dummy ones (because they're not accessible in js)
           const fnArgs = [...Array(v.callback.length).keys()]
             .map((_, i) => String.fromCharCode(97 + i)).join(",");
-          const docBuf = `${name}(${fnArgs}${SIGNATURE_END_MARKER}\0`;
+          v._docBuf = new TextEncoder().encode(
+            `${name}(${fnArgs}${SIGNATURE_END_MARKER}\0`,
+          );
           view.setBigUint64(
             24,
             BigInt(
-              Deno.UnsafePointer.value(
-                Deno.UnsafePointer.of(new TextEncoder().encode(docBuf))!,
-              ),
+              Deno.UnsafePointer.value(Deno.UnsafePointer.of(v._docBuf)!),
             ),
             LE,
           );
           const fn = py.PyCFunction_NewEx(
-            pyMethodDef,
+            v._pyMethodDef,
             PyObject.from(null).handle,
             null,
           );
 
           // NOTE: we need to extend `pyMethodDef` lifetime
           // Otherwise V8 can release it before the callback is called
+          // Is this still needed (after the change of pinning fields to the callabck) ? might be
           const pyObject = new PyObject(fn);
-          pyObject.#pyMethodDef = pyMethodDef;
+          pyObject.#pyMethodDef = methodDef;
           return pyObject;
         } else if (v instanceof PyObject) {
           return v;
