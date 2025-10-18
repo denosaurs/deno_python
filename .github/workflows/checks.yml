@@ -47,23 +47,17 @@ jobs:
       - name: Setup latest deno version
         uses: denoland/setup-deno@v2
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - name: Setup Bun
         if: ${{ matrix.os != 'windows-latest' }}
         uses: oven-sh/setup-bun@v1
 
-      - name: Setup Python (Windows)
-        uses: actions/setup-python@v2
-        if: ${{ matrix.os == 'windows-latest' }}
-        with:
-          python-version: "3.13"
-
       - name: Install NumPy
-        if: ${{ matrix.os != 'macos-latest' }}
         run: python3 -m pip install numpy
-
-      - name: Install NumPy on MacOs
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: python3 -m pip install --break-system-packages numpy
 
       - name: Run deno test
         run: deno task test
