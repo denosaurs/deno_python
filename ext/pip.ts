@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-import-prefix
 import { kw, python, PythonError } from "../mod.ts";
 
 import { join } from "jsr:@std/path@^1/join";
