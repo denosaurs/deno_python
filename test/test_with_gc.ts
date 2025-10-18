@@ -33,7 +33,7 @@ def call_stored_callback():
 
   for (let i = 0; i < 10; i++) {
     // @ts-ignore:requires: --v8-flags=--expose-gc
-    gc(); // if this is commented out, the test will fail beacuse the callback was not freed
+    gc();
   }
 
   // If the callback was incorrectly GC'd, this should segfault
