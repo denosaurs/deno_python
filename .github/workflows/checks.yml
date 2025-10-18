@@ -63,7 +63,7 @@ jobs:
 
       - name: Install NumPy on MacOs
         if: ${{ matrix.os == 'macos-latest' }}
-        run: python3 -m pip install --user --break-system-packages numpy
+        run: python3 -m pip install --break-system-packages numpy
 
       - name: Run deno test
         run: deno task test
