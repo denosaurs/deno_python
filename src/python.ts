@@ -5,6 +5,14 @@ import { cstr, SliceItemRegExp } from "./util.ts";
 
 const refregistry = new FinalizationRegistry(py.Py_DecRef);
 
+// FinalizationRegistry for auto-created callbacks
+// Closes the callback when the PyObject holding it is GC'd
+const callbackCleanupRegistry = new FinalizationRegistry(
+  (callback: Callback) => {
+    callback.destroy();
+  },
+);
+
 /**
  * Symbol used on proxied Python objects to point to the original PyObject object.
  * Can be used to implement PythonProxy and create your own proxies.
@@ -548,6 +556,7 @@ export class PyObject {
           // Is this still needed (after the change of pinning fields to the callabck) ? might be
           const pyObject = new PyObject(fn);
           pyObject.#pyMethodDef = methodDef;
+          // Note: explicit Callback objects are user-managed, not auto-cleaned
           return pyObject;
         } else if (v instanceof PyObject) {
           return v;
@@ -600,6 +609,14 @@ export class PyObject {
       case "function": {
         if (ProxiedPyObject in v) {
           return (v as any)[ProxiedPyObject];
+        }
+
+        if (typeof v === "function") {
+          const callback = new Callback(v);
+          const pyObject = PyObject.from(callback);
+          // Register cleanup to close callback when PyObject is GC'd
+          callbackCleanupRegistry.register(pyObject, callback);
+          return pyObject;
         }
       }
 
