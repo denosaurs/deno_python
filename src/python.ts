@@ -3,13 +3,102 @@
 import { py } from "./ffi.ts";
 import { cstr, SliceItemRegExp } from "./util.ts";
 
-const refregistry = new FinalizationRegistry(py.Py_DecRef);
+/**
+ * Track which handles have been registered with refregistry to prevent duplicates.
+ * We track by handle value (bigint) not PyObject instance because multiple
+ * PyObject wrappers can exist for the same underlying Python object.
+ */
+const registeredHandles = new Set<bigint>();
 
-// FinalizationRegistry for auto-created callbacks
-// Closes the callback when the PyObject holding it is GC'd
+/**
+ * FinalizationRegistry for normal Python objects (NOT callbacks).
+ * When a PyObject wrapper is GC'd, this calls Py_DecRef to release the Python reference.
+ */
+const refregistry = new FinalizationRegistry((handle: Deno.PointerValue) => {
+  py.Py_DecRef(handle);
+});
+
+/**
+ * Global registry to keep Callbacks alive while Python holds references to them.
+ *
+ * Callbacks use a different lifetime management strategy than normal PyObjects:
+ * - They are NOT registered with refregistry
+ * - They are cleaned up via PyCapsule destructor when Python releases them
+ * - This registry prevents JS GC from collecting the Callback while Python needs it
+ */
+const callbackRegistry = new Map<number | bigint, Callback>();
+
+/**
+ * Keep track of handle buffers used by PyCapsule to prevent them from being GC'd.
+ * Each callback has a buffer that stores its handle value, which the capsule destructor
+ * uses to look up the callback when Python frees it.
+ */
+const handleBuffers = new Map<number | bigint, BigUint64Array>();
+
+/**
+ * Persistent global buffer for capsule name - MUST NOT be GC'd.
+ * PyCapsule API requires the name pointer to remain valid for the capsule's lifetime.
+ */
+const CAPSULE_NAME = new TextEncoder().encode("deno_python_callback\0");
+// @ts-ignore: globalThis augmentation
+globalThis.__deno_python_capsule_name = CAPSULE_NAME;
+
+/**
+ * PyCapsule destructor - called by Python when a PyCFunction's refcount reaches zero.
+ *
+ * This is the KEY to callback lifetime management:
+ * 1. When a callback is created, we store it in callbackRegistry with its handle
+ * 2. We create a PyCapsule containing the callback's handle
+ * 3. The PyCapsule is used as the m_self parameter of PyCFunction_NewEx
+ * 4. When Python frees the PyCFunction, it decrefs the capsule
+ * 5. When the capsule's refcount reaches 0, Python calls this destructor
+ * 6. We retrieve the handle, look up the callback, and destroy it
+ *
+ * This ensures callbacks are only freed when Python is truly done with them.
+ */
+const capsuleDestructor = new Deno.UnsafeCallback(
+  {
+    parameters: ["pointer"],
+    result: "void",
+  },
+  (capsulePtr: Deno.PointerValue) => {
+    if (capsulePtr === null) return;
+
+    try {
+      const dataPtr = py.PyCapsule_GetPointer(capsulePtr, CAPSULE_NAME);
+      if (dataPtr === null) return;
+
+      const view = new Deno.UnsafePointerView(dataPtr);
+      const handleValue = view.getBigUint64();
+
+      const callback = callbackRegistry.get(handleValue);
+      if (callback) {
+        callbackRegistry.delete(handleValue);
+        handleBuffers.delete(handleValue);
+        callback.destroy();
+      }
+    } catch (_e) {
+      // Silently ignore errors during cleanup
+    }
+  },
+);
+// @ts-ignore: globalThis augmentation
+globalThis.__deno_python_capsule_destructor = capsuleDestructor;
+
+/**
+ * FinalizationRegistry for auto-created callbacks (created from raw JS functions).
+ *
+ * Auto-created callbacks have two possible cleanup paths:
+ * 1. If passed to Python: cleaned up by capsule destructor (skip here)
+ * 2. If never passed to Python: cleaned up here when PyObject wrapper is GC'd
+ *
+ * We check callbackRegistry to determine which path applies.
+ */
 const callbackCleanupRegistry = new FinalizationRegistry(
-  (callback: Callback) => {
-    callback.destroy();
+  (data: { callback: Callback; handle: bigint }) => {
+    if (!callbackRegistry.has(data.handle)) {
+      data.callback.destroy();
+    }
   },
 );
 
@@ -206,8 +295,18 @@ export class Callback {
     );
   }
 
+  /**
+   * Destroys the callback by closing the UnsafeCallback resource.
+   * This is idempotent and safe to call multiple times.
+   */
   destroy() {
-    this.unsafe.close();
+    if (this.unsafe && this.unsafe.pointer) {
+      try {
+        this.unsafe.close();
+      } catch (_e) {
+        // Ignore double-close errors (BadResource)
+      }
+    }
   }
 }
 
@@ -253,10 +352,33 @@ export class PyObject {
 
   /**
    * Increases ref count of the object and returns it.
+   * This is idempotent - calling it multiple times on the same instance
+   * will only increment the refcount and register once.
+   *
+   * IMPORTANT: Callbacks are handled differently:
+   * - They do NOT get registered with refregistry
+   * - They do NOT call Py_IncRef (the initial ref from PyCFunction_NewEx is sufficient)
+   * - They are cleaned up via the capsule destructor when Python releases them
+   *
+   * This prevents the refcount from being artificially inflated, allowing Python
+   * to properly free callbacks when they're no longer needed.
    */
   get owned(): PyObject {
-    py.Py_IncRef(this.handle);
-    refregistry.register(this, this.handle);
+    const handleValue = Deno.UnsafePointer.value(this.handle);
+    const handleKey = typeof handleValue === "bigint"
+      ? handleValue
+      : BigInt(handleValue);
+
+    const isCallback = callbackRegistry.has(handleKey);
+
+    if (!registeredHandles.has(handleKey)) {
+      if (!isCallback) {
+        py.Py_IncRef(this.handle);
+        refregistry.register(this, this.handle);
+      }
+      registeredHandles.add(handleKey);
+    }
+
     return this;
   }
 
@@ -545,18 +667,45 @@ export class PyObject {
             ),
             LE,
           );
+
+          // Create a temporary buffer to store callback ID (will be filled after fn is created)
+          const handleBuffer = new BigUint64Array([0n]);
+
+          // Create a capsule with destructor to track when Python frees the callback
+          const capsule = py.PyCapsule_New(
+            Deno.UnsafePointer.of(handleBuffer),
+            CAPSULE_NAME,
+            capsuleDestructor.pointer,
+          );
+
+          // Use the capsule as m_self parameter so it gets freed with the function
+          // This is KEY - when PyCFunction is freed, Python will decref m_self (capsule),
+          // triggering our destructor
           const fn = py.PyCFunction_NewEx(
             v._pyMethodDef,
-            PyObject.from(null).handle,
+            capsule,
             null,
           );
 
-          // NOTE: we need to extend `pyMethodDef` lifetime
-          // Otherwise V8 can release it before the callback is called
-          // Is this still needed (after the change of pinning fields to the callabck) ? might be
+          // Now fill in the handle buffer with the actual function pointer
+          const handleValue = Deno.UnsafePointer.value(fn);
+          const handleKey = typeof handleValue === "bigint"
+            ? handleValue
+            : BigInt(handleValue);
+          handleBuffer[0] = handleKey;
+
+          // Store callback in registry to prevent GC while Python holds references
+          callbackRegistry.set(handleKey, v);
+          handleBuffers.set(handleKey, handleBuffer);
+
+          // Decref capsule so only PyCFunction holds it
+          // When PyCFunction is freed, capsule refcount goes to 0, triggering our destructor
+          py.Py_DecRef(capsule);
+
           const pyObject = new PyObject(fn);
           pyObject.#pyMethodDef = methodDef;
-          // Note: explicit Callback objects are user-managed, not auto-cleaned
+
+          // Do NOT register with refregistry - callbacks use capsule-based cleanup
           return pyObject;
         } else if (v instanceof PyObject) {
           return v;
@@ -614,8 +763,16 @@ export class PyObject {
         if (typeof v === "function") {
           const callback = new Callback(v);
           const pyObject = PyObject.from(callback);
-          // Register cleanup to close callback when PyObject is GC'd
-          callbackCleanupRegistry.register(pyObject, callback);
+
+          // Register with cleanup registry for auto-created callbacks
+          const handleValue = Deno.UnsafePointer.value(pyObject.handle);
+          const handleKey = typeof handleValue === "bigint"
+            ? handleValue
+            : BigInt(handleValue);
+          callbackCleanupRegistry.register(pyObject, {
+            callback,
+            handle: handleKey,
+          });
           return pyObject;
         }
       }

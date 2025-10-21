@@ -259,4 +259,19 @@ export const SYMBOLS = {
     parameters: ["pointer"],
     result: "pointer",
   },
+
+  PyCapsule_New: {
+    parameters: ["pointer", "buffer", "pointer"], // pointer, name, destructor
+    result: "pointer",
+  },
+
+  PyCapsule_GetPointer: {
+    parameters: ["pointer", "buffer"], // capsule, name
+    result: "pointer",
+  },
+
+  PyCapsule_SetPointer: {
+    parameters: ["pointer", "pointer"], // capsule, pointer
+    result: "i32",
+  },
 } as const;

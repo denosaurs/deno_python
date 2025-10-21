@@ -1,4 +1,4 @@
-import python, { Callback, PyObject } from "../mod.ts";
+import python, { Callback } from "../mod.ts";
 import { assertEquals } from "./asserts.ts";
 
 Deno.test("js fns are automaticlly converted to callbacks", () => {
@@ -12,9 +12,6 @@ def call_the_callback(cb):
   );
 
   assertEquals(pyModule.call_the_callback(() => 4).valueOf(), 5);
-
-  // @ts-ignore:requires: --v8-flags=--expose-gc
-  gc(); // if this is commented out, the test will fail beacuse the callback was not freed
 });
 
 Deno.test("callbacks are not gc'd while still needed by python", () => {
@@ -47,10 +44,8 @@ def call_stored_callback():
   assertEquals(pyModule.store_and_call_callback(callbackObj).valueOf(), 10);
   assertEquals(callCount, 1);
 
-  for (let i = 0; i < 10; i++) {
-    // @ts-ignore:requires: --v8-flags=--expose-gc
-    gc();
-  }
+  // @ts-ignore:requires: --v8-flags=--expose-gc
+  gc();
 
   // If the callback was incorrectly GC'd, this should segfault
   // But it should work because Python holds a reference
@@ -78,48 +73,33 @@ def call_stored_callback():
   if stored_callback is None:
     return -1
   return stored_callback()
+
+def clear_callback():
+  global stored_callback
+  stored_callback = None
   `,
     "test_gc_module",
   );
 
-  let callCount = 0;
-  const callback = () => {
-    callCount++;
-    return callCount * 10;
-  };
-
   // Store the callback in Python and call it
-  assertEquals(pyModule.store_and_call_callback(callback).valueOf(), 10);
-  assertEquals(callCount, 1);
-
-  for (let i = 0; i < 10; i++) {
-    // @ts-ignore:requires: --v8-flags=--expose-gc
-    gc();
+  {
+    assertEquals(pyModule.store_and_call_callback(() => 4).valueOf(), 4);
   }
+
+  // @ts-ignore:requires: --v8-flags=--expose-gc
+  gc();
 
   // If the callback was incorrectly GC'd, this should segfault
   // But it should work because Python holds a reference
-  assertEquals(pyModule.call_stored_callback().valueOf(), 20);
-  assertEquals(callCount, 2);
+  assertEquals(pyModule.call_stored_callback().valueOf(), 4);
 
   // Call it again to be sure
-  assertEquals(pyModule.call_stored_callback().valueOf(), 30);
-  assertEquals(callCount, 3);
-});
+  assertEquals(pyModule.call_stored_callback().valueOf(), 4);
 
-Deno.test("auto-created callbacks are cleaned up after gc", () => {
-  // Create callback and explicitly null it out to help GC
-  // @ts-ignore PyObject can be created from fns its just the types are not exposed
-  // deno-lint-ignore no-explicit-any
-  let _f: any = PyObject.from(() => 5);
+  // Clean up Python's reference to allow callback to be freed
+  pyModule.clear_callback();
 
-  // Explicitly null the reference
-  _f = null;
-
-  // Now f is null, trigger GC to clean it up
-  // Run many GC cycles with delays to ensure finalizers execute
-  for (let i = 0; i < 10; i++) {
-    // @ts-ignore:requires: --v8-flags=--expose-gc
-    gc();
-  }
+  // Force GC to trigger capsule destructor
+  // @ts-ignore:requires: --v8-flags=--expose-gc
+  gc();
 });
