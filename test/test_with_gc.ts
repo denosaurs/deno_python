@@ -1,4 +1,4 @@
-import python, { Callback } from "../mod.ts";
+import python, { Callback, PyObject } from "../mod.ts";
 import { assertEquals } from "./asserts.ts";
 
 Deno.test("js fns are automaticlly converted to callbacks", () => {
@@ -100,6 +100,19 @@ def clear_callback():
   pyModule.clear_callback();
 
   // Force GC to trigger capsule destructor
+  // @ts-ignore:requires: --v8-flags=--expose-gc
+  gc();
+});
+
+Deno.test("auto-created callbacks are cleaned up after gc", () => {
+  // Create callback and explicitly null it out to help GC
+  // @ts-ignore PyObject can be created from fns its just the types are not exposed
+  // deno-lint-ignore no-explicit-any
+  let _f: any = PyObject.from(() => 5);
+
+  // Explicitly null the reference
+  _f = null;
+
   // @ts-ignore:requires: --v8-flags=--expose-gc
   gc();
 });

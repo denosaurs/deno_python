@@ -334,10 +334,10 @@ export class Callback {
  */
 export class PyObject {
   /**
-   * A Python callabale object as Uint8Array
-   * This is used with `PyCFunction_NewEx` in order to extend its liftime and not allow v8 to release it before its actually used
+   * Reference to the Callback object if this PyObject wraps a callback.
+   * Stored so we can register it with callbackRegistry when .owned is called.
    */
-  #pyMethodDef?: Uint8Array;
+  #callback?: Callback;
   constructor(public handle: Deno.PointerValue) {}
 
   /**
@@ -369,10 +369,13 @@ export class PyObject {
       ? handleValue
       : BigInt(handleValue);
 
-    const isCallback = callbackRegistry.has(handleKey);
-
     if (!registeredHandles.has(handleKey)) {
-      if (!isCallback) {
+      // Check if this is a callback (has #callback reference)
+      if (this.#callback) {
+        // Callback - register with callbackRegistry now that it's being passed to Python
+        callbackRegistry.set(handleKey, this.#callback);
+      } else {
+        // Normal PyObject - use refregistry
         py.Py_IncRef(this.handle);
         refregistry.register(this, this.handle);
       }
@@ -694,8 +697,8 @@ export class PyObject {
             : BigInt(handleValue);
           handleBuffer[0] = handleKey;
 
-          // Store callback in registry to prevent GC while Python holds references
-          callbackRegistry.set(handleKey, v);
+          // Store handle buffer for capsule destructor lookup
+          // The callback will be added to callbackRegistry when .owned is called
           handleBuffers.set(handleKey, handleBuffer);
 
           // Decref capsule so only PyCFunction holds it
@@ -703,7 +706,7 @@ export class PyObject {
           py.Py_DecRef(capsule);
 
           const pyObject = new PyObject(fn);
-          pyObject.#pyMethodDef = methodDef;
+          pyObject.#callback = v; // Store callback reference for registration in .owned
 
           // Do NOT register with refregistry - callbacks use capsule-based cleanup
           return pyObject;
