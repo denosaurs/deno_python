@@ -384,3 +384,7 @@ def call_the_callback(cb):
     pyCallback.destroy();
   }
 });
+
+Deno.test("None valueOf is null", () => {
+  assertEquals(python.None.valueOf(), null);
+});

@@ -931,11 +931,18 @@ export class PyObject {
    * a proxy to Python object.
    */
   valueOf(): any {
+    if (
+      Deno.UnsafePointer.equals(
+        this.handle,
+        python.None[ProxiedPyObject].handle,
+      )
+    ) {
+      return null;
+    }
+
     const type = py.PyObject_Type(this.handle);
 
-    if (Deno.UnsafePointer.equals(type, python.None[ProxiedPyObject].handle)) {
-      return null;
-    } else if (
+    if (
       Deno.UnsafePointer.equals(type, python.bool[ProxiedPyObject].handle)
     ) {
       return this.asBoolean();
