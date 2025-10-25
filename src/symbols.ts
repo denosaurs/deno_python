@@ -261,7 +261,7 @@ export const SYMBOLS = {
   },
 
   PyCapsule_New: {
-    parameters: ["pointer", "buffer", "pointer"], // pointer, name, destructor
+    parameters: ["buffer", "buffer", "pointer"], // pointer, name, destructor
     result: "pointer",
   },
 

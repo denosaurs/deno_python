@@ -365,21 +365,18 @@ export class PyObject {
    */
   get owned(): PyObject {
     const handleValue = Deno.UnsafePointer.value(this.handle);
-    const handleKey = typeof handleValue === "bigint"
-      ? handleValue
-      : BigInt(handleValue);
 
-    if (!registeredHandles.has(handleKey)) {
+    if (!registeredHandles.has(handleValue)) {
       // Check if this is a callback (has #callback reference)
       if (this.#callback) {
         // Callback - register with callbackRegistry now that it's being passed to Python
-        callbackRegistry.set(handleKey, this.#callback);
+        callbackRegistry.set(handleValue, this.#callback);
       } else {
         // Normal PyObject - use refregistry
         py.Py_IncRef(this.handle);
         refregistry.register(this, this.handle);
       }
-      registeredHandles.add(handleKey);
+      registeredHandles.add(handleValue);
     }
 
     return this;
@@ -676,7 +673,7 @@ export class PyObject {
 
           // Create a capsule with destructor to track when Python frees the callback
           const capsule = py.PyCapsule_New(
-            Deno.UnsafePointer.of(handleBuffer),
+            handleBuffer,
             CAPSULE_NAME,
             capsuleDestructor.pointer,
           );
@@ -692,14 +689,11 @@ export class PyObject {
 
           // Now fill in the handle buffer with the actual function pointer
           const handleValue = Deno.UnsafePointer.value(fn);
-          const handleKey = typeof handleValue === "bigint"
-            ? handleValue
-            : BigInt(handleValue);
-          handleBuffer[0] = handleKey;
+          handleBuffer[0] = handleValue;
 
           // Store handle buffer for capsule destructor lookup
           // The callback will be added to callbackRegistry when .owned is called
-          handleBuffers.set(handleKey, handleBuffer);
+          handleBuffers.set(handleValue, handleBuffer);
 
           // Decref capsule so only PyCFunction holds it
           // When PyCFunction is freed, capsule refcount goes to 0, triggering our destructor
@@ -769,12 +763,9 @@ export class PyObject {
 
           // Register with cleanup registry for auto-created callbacks
           const handleValue = Deno.UnsafePointer.value(pyObject.handle);
-          const handleKey = typeof handleValue === "bigint"
-            ? handleValue
-            : BigInt(handleValue);
           callbackCleanupRegistry.register(pyObject, {
             callback,
-            handle: handleKey,
+            handle: handleValue,
           });
           return pyObject;
         }
