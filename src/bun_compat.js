@@ -94,7 +94,7 @@ if (!("Deno" in globalThis) && "Bun" in globalThis) {
       }
 
       static value(ptr) {
-        return ptr;
+        return BigInt(ptr);
       }
     };
 
