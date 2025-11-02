@@ -4,14 +4,9 @@ import { py } from "./ffi.ts";
 import { cstr, SliceItemRegExp } from "./util.ts";
 
 const refregistry = new FinalizationRegistry(py.Py_DecRef);
-
-// FinalizationRegistry for auto-created callbacks
-// Closes the callback when the PyObject holding it is GC'd
-const callbackCleanupRegistry = new FinalizationRegistry(
-  (callback: Callback) => {
-    callback.destroy();
-  },
-);
+// keep tracks of all callbacks, because JS can incorrectly GC them
+// using callback.destroy will remove the callback from this map
+const callbacks: { [id: number]: Callback } = {};
 
 /**
  * Symbol used on proxied Python objects to point to the original PyObject object.
@@ -151,6 +146,9 @@ export class Callback {
     result: "pointer";
   }>;
 
+  static #nextId = 0;
+  #id: number;
+
   // Keep native-facing buffers alive for as long as this Callback exists
   /** @private */
   _pyMethodDef?: Uint8Array<ArrayBuffer>;
@@ -160,6 +158,8 @@ export class Callback {
   _docBuf?: Uint8Array<ArrayBuffer>;
 
   constructor(public callback: PythonJSCallback) {
+    this.#id = Callback.#nextId++;
+    callbacks[this.#id] = this;
     this.unsafe = new Deno.UnsafeCallback(
       {
         parameters: ["pointer", "pointer", "pointer"],
@@ -208,6 +208,7 @@ export class Callback {
 
   destroy() {
     this.unsafe.close();
+    delete callbacks[this.#id];
   }
 }
 
@@ -234,11 +235,6 @@ export class Callback {
  * C PyObject.
  */
 export class PyObject {
-  /**
-   * A Python callabale object as Uint8Array
-   * This is used with `PyCFunction_NewEx` in order to extend its liftime and not allow v8 to release it before its actually used
-   */
-  #pyMethodDef?: Uint8Array;
   constructor(public handle: Deno.PointerValue) {}
 
   /**
@@ -555,8 +551,6 @@ export class PyObject {
           // Otherwise V8 can release it before the callback is called
           // Is this still needed (after the change of pinning fields to the callabck) ? might be
           const pyObject = new PyObject(fn);
-          pyObject.#pyMethodDef = methodDef;
-          // Note: explicit Callback objects are user-managed, not auto-cleaned
           return pyObject;
         } else if (v instanceof PyObject) {
           return v;
@@ -614,8 +608,6 @@ export class PyObject {
         if (typeof v === "function") {
           const callback = new Callback(v);
           const pyObject = PyObject.from(callback);
-          // Register cleanup to close callback when PyObject is GC'd
-          callbackCleanupRegistry.register(pyObject, callback);
           return pyObject;
         }
       }
