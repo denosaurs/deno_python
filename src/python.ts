@@ -862,7 +862,10 @@ export class PyObject {
 
     maybeThrowError();
 
-    return new PyObject(result);
+    const pyObject = new PyObject(result);
+    // PyObject_Call returns a new reference. Register it so GC releases it.
+    refregistry.register(pyObject, result);
+    return pyObject;
   }
 
   /**

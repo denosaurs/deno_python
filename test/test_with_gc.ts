@@ -1,6 +1,34 @@
-import python, { Callback } from "../mod.ts";
+import python, { Callback, ProxiedPyObject } from "../mod.ts";
 import { assertEquals } from "./asserts.ts";
 
+Deno.test("call results release their Python reference after gc", async () => {
+  const sys = python.import("sys");
+  const pyModule = python.runModule(
+    `
+target = object()
+def get_target():
+  return target
+`,
+    "call_result_gc",
+  );
+  const target = pyModule.target;
+  const count = () => sys.getrefcount(target).valueOf() as number;
+
+  const baseline = count();
+  const getTarget = pyModule.get_target[ProxiedPyObject];
+  const callMany = () => {
+    const results = [];
+    for (let i = 0; i < 100; i++) results.push(getTarget.call());
+  };
+  callMany();
+  for (let i = 0; i < 10; i++) {
+    // @ts-ignore: requires --v8-flags=--expose-gc
+    gc();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  assertEquals(count(), baseline);
+});
 Deno.test(
   "js fns are automaticlly converted to callbacks",
   // auto callbacks are just a convience api, but they leak their resources
